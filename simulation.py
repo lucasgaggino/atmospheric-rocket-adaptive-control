@@ -1,12 +1,16 @@
 import numpy as np
 from scipy.integrate import solve_ivp
+from rocket import Rocket
+from atmosphere import Atmosphere
+from avionics import Avionics
+
 
 class Simulation:
     def __init__(self, rocket, atmos, avionics, t_span=(0, 60), initial_state=None):
-        self.rocket = rocket
-        self.atmos = atmos
-        self.avionics = avionics
-        self.t_span = t_span
+        self.rocket:Rocket = rocket
+        self.atmos:Atmosphere = atmos
+        self.avionics:Avionics = avionics
+        self.t_span:tuple[float, float] = t_span
         if initial_state is None:
             self.initial_state = np.array([0, 0, 0, 0, np.pi/2, 0])  # x, y, vx, vy, theta, omega
         else:

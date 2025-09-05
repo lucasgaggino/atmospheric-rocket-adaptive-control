@@ -77,7 +77,7 @@ class PIDAvionics:
     def __init__(self, trajectory, 
                  position_gains={'kp': 0.01, 'ki': 0.001, 'kd': 0.1},
                  velocity_gains={'kp': 0.05, 'ki': 0.005, 'kd': 0.2},
-                 min_thrust=0.5, max_thrust=1.0, max_gimbal_angle=15.0):
+                 min_thrust=0.8, max_thrust=1.0, max_gimbal_angle=15.0):
         """
         Avionics system with PID controllers for trajectory following
         
@@ -94,34 +94,34 @@ class PIDAvionics:
         self.max_thrust = max_thrust
         self.max_gimbal_angle = max_gimbal_angle
         
-        # PID controllers for position (x, y)
+        # PID controllers for position (x, y) - more aggressive limits
         self.position_x_pid = PIDController(
             kp=position_gains['kp'], 
             ki=position_gains['ki'], 
             kd=position_gains['kd'],
-            output_limits=(-max_gimbal_angle*0.8, max_gimbal_angle*0.8)
+            output_limits=(-max_gimbal_angle, max_gimbal_angle)  # Full gimbal authority
         )
         
         self.position_y_pid = PIDController(
-            kp=position_gains['kp']*2, 
-            ki=position_gains['ki']*2, 
-            kd=position_gains['kd']*2,
-            output_limits=(-0.4, 0.4)  # Thrust adjustment range
+            kp=position_gains['kp'], 
+            ki=position_gains['ki'], 
+            kd=position_gains['kd'],
+            output_limits=(-0.5, 0.5)  # More thrust adjustment range
         )
         
-        # PID controllers for velocity (vx, vy)
+        # PID controllers for velocity (vx, vy) - more aggressive
         self.velocity_x_pid = PIDController(
             kp=velocity_gains['kp'], 
             ki=velocity_gains['ki'], 
             kd=velocity_gains['kd'],
-            output_limits=(-max_gimbal_angle*0.3, max_gimbal_angle*0.3)
+            output_limits=(-max_gimbal_angle*0.5, max_gimbal_angle*0.5)  # More gimbal authority
         )
         
         self.velocity_y_pid = PIDController(
             kp=velocity_gains['kp'], 
             ki=velocity_gains['ki'], 
             kd=velocity_gains['kd'],
-            output_limits=(-0.3, 0.3)  # Velocity-based thrust adjustment
+            output_limits=(-0.4, 0.4)  # More thrust adjustment authority
         )
         
         # Base control values - need higher thrust for trajectory following

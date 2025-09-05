@@ -1,4 +1,6 @@
 import numpy as np
+from avionics import Avionics
+from atmosphere import Atmosphere
 
 class Rocket:
     def __init__(self, dry_mass=500, fuel_mass=500, max_thrust=15000, engine_gimbal_range=15, 
@@ -77,11 +79,22 @@ class Rocket:
             self.update_center_of_mass()
             self.update_inertia()
 
-    def get_derivatives(self, state, avionics, atmos, time, dt=0.01):
+    def get_derivatives(self, state, avionics:Avionics, atmos:Atmosphere, time, dt=0.01):
+        """
+        Get rocket derivatives based on state, avionics, atmosphere, time, and dt
+        
+        Parameters:
+        - state: Current rocket state [x, y, vx, vy, theta, omega]
+        - avionics: Avionics system instance
+        - atmos: Atmosphere instance
+        - time: Current simulation time
+        - dt: Time step (optional, default is 0.01 seconds)
+        """
         x, y, vx, vy, theta, omega = state
         
         # Get commands from avionics system
         thrust_fraction, thrust_angle = avionics.update(time, state)
+        print(f"Thrust fraction: {thrust_fraction}, Thrust angle: {thrust_angle}")
 
         thrust_dir = theta + thrust_angle
         thrust_mag = self.max_thrust * thrust_fraction if self.fuel_mass > 0 else 0
@@ -93,11 +106,13 @@ class Rocket:
         gravity_force = np.array([0, -self.total_mass * self.g])
 
         velocity = np.array([vx, vy])
+        
         aero_force, aero_torque = atmos.get_forces(y, velocity, theta)
+        
 
         total_force = thrust_force + gravity_force + aero_force
         accel = total_force / self.total_mass
-
+        
         thrust_torque = thrust_mag * self.engine_distance * np.sin(thrust_angle)
         total_torque = thrust_torque + aero_torque
         alpha = total_torque / self.inertia
