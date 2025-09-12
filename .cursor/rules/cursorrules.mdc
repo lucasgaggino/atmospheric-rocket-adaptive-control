@@ -1,0 +1,90 @@
+---
+alwaysApply: true
+---
+
+# Repositorio de Control Adaptativo
+
+## Descripción General
+Este repositorio contiene ejemplos y ejercicios de un curso de **Control Adaptativo** organizado en módulos temáticos. Es material docente del profesor para enseñanza de técnicas de control de sistemas.
+
+## Estructura del Proyecto
+- `0. Introduccion/` - Conceptos básicos de control robusto
+- `1. Sistemas discretos/` - Discretización y control digital
+- `2. Modelo de perturbaciones/` - Modelos determinísticos y estocásticos
+- `3. No parametrica/` - Identificación por métodos no paramétricos
+- `4. Identificacion parametrica/` - Estimación paramétrica por mínimos cuadrados
+
+## Librerías Python Principales
+- **numpy** - Computación numérica y arrays
+- **matplotlib.pyplot** - Gráficos y visualización
+- **control** (python-control) - Análisis y diseño de sistemas de control
+- **sympy** - Matemática simbólica (opcional, usado en algunos notebooks)
+
+## Funcionalidades Implementadas
+- **Control Robusto**: Análisis de estabilidad con incertidumbre paramétrica
+- **Sistemas Discretos**: Discretización ZOH, control PD, control deadbeat
+- **Identificación**: Métodos paramétricos (RLS) y no paramétricos
+- **Validación**: Comparación entre modelos continuos y discretos
+
+## Convenciones de Código
+- Uso extensivo de `python-control` para análisis de sistemas
+- Notebooks Jupyter (.ipynb) para ejemplos interactivos
+- Scripts Python (.py) para implementaciones específicas
+- Enfoque en visualización de respuestas temporales y frecuenciales
+
+## Comandos Útiles
+```bash
+# Instalar dependencias principales
+pip install numpy matplotlib python-control sympy
+
+# Ejecutar notebooks
+jupyter notebook
+```
+
+## Notas Importantes
+- Los ejemplos están diseñados para fines educativos
+- Se enfoca en aplicaciones prácticas de control adaptativo
+- Incluye validación experimental de algoritmos teóricos
+# Repositorio de Control Adaptativo
+
+## Descripción General
+Este repositorio contiene ejemplos y ejercicios de un curso de **Control Adaptativo** organizado en módulos temáticos. Es material docente del profesor para enseñanza de técnicas de control de sistemas.
+
+## Estructura del Proyecto
+- `0. Introduccion/` - Conceptos básicos de control robusto
+- `1. Sistemas discretos/` - Discretización y control digital
+- `2. Modelo de perturbaciones/` - Modelos determinísticos y estocásticos
+- `3. No parametrica/` - Identificación por métodos no paramétricos
+- `4. Identificacion parametrica/` - Estimación paramétrica por mínimos cuadrados
+
+## Librerías Python Principales
+- **numpy** - Computación numérica y arrays
+- **matplotlib.pyplot** - Gráficos y visualización
+- **control** (python-control) - Análisis y diseño de sistemas de control
+- **sympy** - Matemática simbólica (opcional, usado en algunos notebooks)
+
+## Funcionalidades Implementadas
+- **Control Robusto**: Análisis de estabilidad con incertidumbre paramétrica
+- **Sistemas Discretos**: Discretización ZOH, control PD, control deadbeat
+- **Identificación**: Métodos paramétricos (RLS) y no paramétricos
+- **Validación**: Comparación entre modelos continuos y discretos
+
+## Convenciones de Código
+- Uso extensivo de `python-control` para análisis de sistemas
+- Notebooks Jupyter (.ipynb) para ejemplos interactivos
+- Scripts Python (.py) para implementaciones específicas
+- Enfoque en visualización de respuestas temporales y frecuenciales
+
+## Comandos Útiles
+```bash
+# Instalar dependencias principales
+pip install numpy matplotlib python-control sympy
+
+# Ejecutar notebooks
+jupyter notebook
+```
+
+## Notas Importantes
+- Los ejemplos están diseñados para fines educativos
+- Se enfoca en aplicaciones prácticas de control adaptativo
+- Incluye validación experimental de algoritmos teóricos
