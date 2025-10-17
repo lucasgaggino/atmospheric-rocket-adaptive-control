@@ -38,65 +38,162 @@ theta = np.zeros(N)
 for k in range(2, N):
     theta[k] = A_d * theta[k-1] + B_d * u[k-1]
 
-# ARX model identification (simplified)
+# ========================================
+# LINEAR ARX MODEL IDENTIFICATION
+# ========================================
 # Model: theta[k] = a1*theta[k-1] + b1*u[k-1]
+print("\n" + "="*50)
+print("LINEAR ARX MODEL IDENTIFICATION")
+print("="*50)
+
 k_start = 1
-X = []
+X_linear = []
 y_target = []
 
 for k in range(k_start, N):
-    X.append([theta[k-1], u[k-1]])
+    X_linear.append([theta[k-1], u[k-1]])
     y_target.append(theta[k])
 
-X = np.array(X)
+X_linear = np.array(X_linear)
 y_target = np.array(y_target)
 
-# Least squares
-theta_hat = np.linalg.pinv(X) @ y_target
+# Least squares for linear model
+theta_hat_linear = np.linalg.pinv(X_linear) @ y_target
 
-print("Estimated parameters:")
-print(f"a1 (theta[k-1]): {theta_hat[0]:.4f}")
-print(f"b1 (u[k-1]): {theta_hat[1]:.4f}")
-print(f"True parameters: a1={A_d:.4f}, b1={B_d:.4f}")
+print("Estimated parameters (Linear ARX):")
+print(f"  a1 (theta[k-1]):    {theta_hat_linear[0]:.6f}")
+print(f"  b1 (u[k-1]):        {theta_hat_linear[1]:.6f}")
+print(f"True parameters: a1={A_d:.6f}, b1={B_d:.6f}")
 
-# Validation: simulate with estimated model
-theta_sim = np.zeros(N)
-theta_sim[0] = theta[0]
+# Validation: simulate with linear model
+theta_sim_linear = np.zeros(N)
+theta_sim_linear[0] = theta[0]
 
 for k in range(k_start, N):
-    theta_sim[k] = theta_hat[0]*theta_sim[k-1] + theta_hat[1]*u[k-1]
+    theta_sim_linear[k] = theta_hat_linear[0]*theta_sim_linear[k-1] + theta_hat_linear[1]*u[k-1]
 
-# Plot results
+# RMSE for linear model
+rmse_linear = np.sqrt(np.mean((theta - theta_sim_linear)**2))
+print(f"RMSE (Linear): {rmse_linear:.6f}")
+
+# ========================================
+# NONLINEAR NARX MODEL IDENTIFICATION
+# ========================================
+# Model: theta[k] = a1*theta[k-1] + a2*sin(theta[k-1]) + b1*u[k-1] + b2*u[k-1]^2
+print("\n" + "="*50)
+print("NONLINEAR NARX MODEL IDENTIFICATION")
+print("="*50)
+
+X_nonlinear = []
+for k in range(k_start, N):
+    X_nonlinear.append([
+        theta[k-1],              # linear term
+        np.sin(theta[k-1]),      # nonlinear term: sin(theta)
+        u[k-1],                   # linear input
+        u[k-1]**2                 # nonlinear input: u^2
+    ])
+
+X_nonlinear = np.array(X_nonlinear)
+
+# Least squares for nonlinear model
+theta_hat_nonlinear = np.linalg.pinv(X_nonlinear) @ y_target
+
+print("Estimated parameters (Nonlinear NARX):")
+print(f"  a1 (theta[k-1]):     {theta_hat_nonlinear[0]:.6f}")
+print(f"  a2 (sin(theta[k-1])): {theta_hat_nonlinear[1]:.6f}")
+print(f"  b1 (u[k-1]):         {theta_hat_nonlinear[2]:.6f}")
+print(f"  b2 (u[k-1]^2):       {theta_hat_nonlinear[3]:.6f}")
+
+# Validation: simulate with nonlinear model
+theta_sim_nonlinear = np.zeros(N)
+theta_sim_nonlinear[0] = theta[0]
+
+for k in range(k_start, N):
+    theta_sim_nonlinear[k] = (theta_hat_nonlinear[0]*theta_sim_nonlinear[k-1] + 
+                               theta_hat_nonlinear[1]*np.sin(theta_sim_nonlinear[k-1]) + 
+                               theta_hat_nonlinear[2]*u[k-1] + 
+                               theta_hat_nonlinear[3]*u[k-1]**2)
+
+# RMSE for nonlinear model
+rmse_nonlinear = np.sqrt(np.mean((theta - theta_sim_nonlinear)**2))
+print(f"RMSE (Nonlinear): {rmse_nonlinear:.6f}")
+
+print("\n" + "="*50)
+print(f"RMSE Improvement: {(rmse_linear - rmse_nonlinear)/rmse_linear * 100:.2f}%")
+print("="*50)
+
+# ========================================
+# PLOTTING RESULTS
+# ========================================
 t = np.arange(N) * Ts
 
-plt.figure(figsize=(12, 4))
+# Figure 1: Input and Output Comparison
+plt.figure(figsize=(15, 9))
 
-plt.subplot(1, 3, 1)
-plt.step(t, u)
+plt.subplot(3, 2, 1)
+plt.step(t, u, where='post')
 plt.xlabel('Time [s]')
 plt.ylabel('Force [N]')
-plt.title('Input')
-plt.grid(True)
+plt.title('Input Signal (PRBS)')
+plt.grid(True, alpha=0.3)
 
-plt.subplot(1, 3, 2)
-plt.plot(t, theta, label='True')
-plt.plot(t, theta_sim, '--', label='Estimated')
+plt.subplot(3, 2, 2)
+plt.plot(t, theta, 'k-', label='True', linewidth=2)
+plt.plot(t, theta_sim_linear, 'b--', label='Linear ARX', linewidth=1.5, alpha=0.7)
+plt.plot(t, theta_sim_nonlinear, 'r:', label='Nonlinear NARX', linewidth=1.5, alpha=0.7)
 plt.xlabel('Time [s]')
 plt.ylabel('Angle [rad]')
-plt.title('Output')
+plt.title('Output Comparison')
 plt.legend()
-plt.grid(True)
+plt.grid(True, alpha=0.3)
 
-plt.subplot(1, 3, 3)
-plt.plot(t, theta - theta_sim)
+plt.subplot(3, 2, 3)
+plt.plot(t, theta - theta_sim_linear, 'b-', label='Linear ARX Error')
 plt.xlabel('Time [s]')
 plt.ylabel('Error [rad]')
-plt.title('Prediction Error')
-plt.grid(True)
+plt.title(f'Linear ARX Prediction Error (RMSE={rmse_linear:.6f})')
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.subplot(3, 2, 4)
+plt.plot(t, theta - theta_sim_nonlinear, 'r-', label='Nonlinear NARX Error')
+plt.xlabel('Time [s]')
+plt.ylabel('Error [rad]')
+plt.title(f'Nonlinear NARX Prediction Error (RMSE={rmse_nonlinear:.6f})')
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.subplot(3, 2, 5)
+# Zoom in on a section to see differences
+zoom_start, zoom_end = 50, 150
+plt.plot(t[zoom_start:zoom_end], theta[zoom_start:zoom_end], 'k-', label='True', linewidth=2)
+plt.plot(t[zoom_start:zoom_end], theta_sim_linear[zoom_start:zoom_end], 'b--', 
+         label='Linear ARX', linewidth=1.5)
+plt.plot(t[zoom_start:zoom_end], theta_sim_nonlinear[zoom_start:zoom_end], 'r:', 
+         label='Nonlinear NARX', linewidth=1.5)
+plt.xlabel('Time [s]')
+plt.ylabel('Angle [rad]')
+plt.title('Output Comparison (Zoomed)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.subplot(3, 2, 6)
+# Error comparison bar chart
+models = ['Linear\nARX', 'Nonlinear\nNARX']
+rmse_values = [rmse_linear, rmse_nonlinear]
+colors = ['blue', 'red']
+bars = plt.bar(models, rmse_values, color=colors, alpha=0.7, edgecolor='black')
+plt.ylabel('RMSE [rad]')
+plt.title('RMSE Comparison')
+plt.grid(True, alpha=0.3, axis='y')
+# Add value labels on bars
+for bar, rmse in zip(bars, rmse_values):
+    height = bar.get_height()
+    plt.text(bar.get_x() + bar.get_width()/2., height,
+             f'{rmse:.6f}',
+             ha='center', va='bottom', fontsize=10, fontweight='bold')
 
 plt.tight_layout()
+plt.savefig('identification_comparison.png', dpi=150, bbox_inches='tight')
+print("\nPlot saved as 'identification_comparison.png'")
 plt.show()
-
-# RMSE
-rmse = np.sqrt(np.mean((theta - theta_sim)**2))
-print(f"RMSE: {rmse:.6f}")
