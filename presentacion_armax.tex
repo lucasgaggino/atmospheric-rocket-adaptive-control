@@ -14,7 +14,7 @@
 \subtitle{Comparativa de Modelos}
 \author{Lucas Gaggino}
 \institute{Facultad de Ingeniería - UBA \\ Control Adaptativo 86.20}
-\date{\today}
+
 
 \begin{document}
 
@@ -169,44 +169,7 @@ G(s) = \frac{B_\theta}{s^2 - A_\theta} = \frac{-1.46}{s^2 + 15.79}
 \end{itemize}
 \end{frame}
 
-\section{Conclusión}
 
-\begin{frame}{Conclusiones}
-\begin{block}{Principales Hallazgos}
-\begin{itemize}
-\item Modelo ARMAX simplificado supera limitaciones de modelos ARX tradicionales
-\item Eliminación de coeficientes problemáticos mejora la identificación
-\item Validación estadística confirma calidad del modelo identificado
-\end{itemize}
-\end{block}
-
-\begin{block}{Implicaciones para Identificación}
-\begin{itemize}
-\item Comprensión física del sistema es esencial
-\item Modelos parsimoniosos pueden superar modelos completos
-\item Validación rigurosa es condición necesaria para confianza
-\end{itemize}
-\end{block}
-\end{frame}
-
-\begin{frame}{Implementación}
-\begin{center}
-\begin{minipage}{0.6\textwidth}
-\small
-Código fuente disponible:\\
-\texttt{identificacion\_pendulo.py}
-\end{minipage}
-\end{center}
-
-\vspace{0.5cm}
-\begin{block}{Generación de imágenes}
-\begin{itemize}
-\item Automática con matplotlib
-\item Alta resolución (300 DPI)
-\item Guardado en \texttt{imagenes\_identificacion/}
-\end{itemize}
-\end{block}
-\end{frame}
 
 \section{Identificación del Sistema Inestable: Péndulo Vertical}
 
@@ -288,22 +251,22 @@ Factor $\lambda$ & 0.80 & (alto olvido) \\
 \end{itemize}
 \end{frame}
 
+\begin{frame}{Análisis de Autocorrelación del Error}
+\begin{center}
+\includegraphics[width=0.8\textwidth]{imagenes_identificacion_vertical/rls_identification_vertical.png}
+\end{center}
+
+
+\begin{block}{Explicación}
+El modelo ARMAX captura bien la estructura del ruido, pero los parámetros identificados son físicamente incorrectos debido a la amplificación exponencial inherente a sistemas inestables.
+\end{block}
+\end{frame}
+
 \begin{frame}{Análisis de Estabilidad: Plano Complejo}
 \begin{center}
 \includegraphics[width=0.7\textwidth]{imagenes_identificacion_vertical/pole_stability_vertical.png}
 \end{center}
-\begin{block}{Comparación Polos}
-\begin{tabular}{l|c|c}
-\textbf{Sistema} & \textbf{Parte Real} & \textbf{Módulo} \\
-\hline
-Real (Inestable) & $\pm$1.0827 & 1.0827 \\
-Identificado (Estable) & $\pm$1.0827 & 0.5880 \\
-\hline
-\textbf{Diagnóstico} & \textbf{Error} & \textbf{Detalle} \\
-\hline
-Estabilidad & Incorrecta & Sistema identificado como estable \\
-\end{tabular}
-\end{block}
+
 \end{frame}
 
 \begin{frame}{Análisis Cuantitativo: Errores de Identificación}
@@ -320,7 +283,7 @@ c_1 & 0.000000 & 0.000834 & N/A \\
 \end{tabular}
 \end{center}
 \begin{itemize}
-\item Errores catastróficos en parámetros de ganancia
+\item Errores grandes en parámetros de ganancia
 \item Parámetros dinámicos con errores moderados
 \item Ganancia amplificada por 26000 veces
 \end{itemize}
@@ -344,7 +307,7 @@ c_1 & 0.000000 & 0.000834 & N/A \\
 \item Sistema inestable: $x(k) = e^{\lambda k} x(0)$
 \item Ruido aditivo: $y(k) = x(k) + e(k)$
 \item Error de modelado: amplificado exponencialmente
-\item Algoritmo RLS: diverge por gradientes explosivos
+\item Algoritmo RLS: diverge por gradientes divergentes
 \end{itemize}
 \end{block}
 
@@ -375,46 +338,256 @@ Estabilidad & Correcta & Incorrecta \\
 \end{center}
 \end{frame}
 
-\begin{frame}{Lecciones Aprendidas: Sistemas Inestables}
-\begin{block}{Limitaciones Inherentes}
-\begin{itemize}
-\item La identificación paramétrica de sistemas inestables es inherentemente limitada
-\item La amplificación exponencial del ruido hace la convergencia imposible
-\item Se requieren condiciones experimentales extremadamente restrictivas
-\item Los algoritmos adaptativos tradicionales fallan sistemáticamente
-\end{itemize}
+\section{Modelo NARX: Captura de No Linealidades}
+
+\begin{frame}{Modelo NARX para Sistema Inestable}
+\begin{block}{Estructura del Modelo NARX}
+Para capturar no linealidades, utilizamos un modelo NARX:
+\[
+y[k] = \theta_0 y[k-1] + \theta_1 \sin(y[k-1]) + \theta_2 u[k-1] + \theta_3 u[k-1]^2 + e[k]
+\]
 \end{block}
 
-\begin{block}{Alternativas para Control}
+\begin{block}{Ventajas del Enfoque NARX}
 \begin{itemize}
-\item \textbf{Control basado en modelo}: Usar modelo teórico conocido
-\item \textbf{Control adaptativo}: Algoritmos robustos a inestabilidad
-\item \textbf{Control por realimentación}: Alta ganancia para estabilidad
-\item \textbf{Control predictivo}: Modelos de estado con restricciones
+\item Incluye términos no lineales como $\sin(\theta)$ que aparecen en la dinámica real
+\item Puede capturar comportamientos complejos del péndulo inestable
+\item Más expresivo que modelos lineales para sistemas no lineales
 \end{itemize}
 \end{block}
 \end{frame}
 
-\begin{frame}{Conclusión: Comparativa de Sistemas}
-\begin{block}{Sistema Estable (Péndulo hacia abajo)}
+\begin{frame}{Identificación NARX: Evolución de Parámetros}
+\begin{center}
+\includegraphics[width=0.8\textwidth]{imagenes_identificacion_narx/narx_identification.png}
+\end{center}
 \begin{itemize}
-\item \checkmark Identificación exitosa con ARMAX
-\item \checkmark Validación precisa con métricas cuantitativas
-\item \checkmark Modelo útil para control y predicción
+\item Algoritmo RLS converge hasta $k=349$ antes de overflow
+\item Parámetros identificados: $\theta_0=1.08$, $\theta_1=-0.0002$, $\theta_2=-0.007$, $\theta_3=1.12$
+\item Modelo NARX captura parcialmente la dinámica no lineal
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Análisis: Convergencia de Parámetros NARX}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{imagenes_identificacion_narx/narx_parameters.png}
+\end{center}
+\begin{itemize}
+\item $\theta_0$ (lineal): Convergencia rápida a valor estable
+\item $\theta_1$ (sin): Parámetro pequeño pero significativo
+\item $\theta_2$ (u): Término de entrada identificado
+\item $\theta_3$ (u²): Término cuadrático dominante
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Comparación NARX vs Sistema Real}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{imagenes_identificacion_narx/narx_vs_linear.png}
+\end{center}
+\begin{itemize}
+\item NARX captura mejor las no linealidades que modelos lineales
+\item Error de predicción reducido comparado con ARMAX
+\item Sin embargo, validación completa limitada por overflow numérico
+\end{itemize}
+\end{frame}
+
+
+\section{Modelo Output Error (OE): Ruido Aditivo Puro}
+
+\begin{frame}{Modelo Output Error para Sistema Inestable}
+\begin{block}{Estructura del Modelo OE}
+El modelo Output Error asume ruido únicamente en la ecuación de medición:
+\[
+y[k] = \frac{B(q)}{F(q)} u[k] + e[k]
+\]
+donde $e[k]$ es ruido blanco puro y no afecta la dinámica del sistema.
+\end{block}
+
+\begin{block}{Cálculo de la Autocorrelación del Error}
+La autocorrelación del error se calcula como:
+\[
+r_{ee}(\tau) = \frac{1}{N} \sum_{k=\tau+1}^{N} e[k] \cdot e[k-\tau]
+\]
+donde $e[k] = y[k] - \hat{y}[k]$ es el error de predicción. Para un buen modelo, $r_{ee}(\tau) \approx 0$ para $\tau \neq 0$, indicando que el error es ruido blanco.
+\end{block}
+\end{frame}
+
+\begin{frame}{Ventajas del Enfoque OE}
+\begin{itemize}
+\item Modelo más simple que ARMAX (no incluye modelado de ruido dinámico)
+\item Adecuado cuando el ruido es puramente aditivo en la salida
+\item Computacionalmente más eficiente que modelos con términos de ruido\end{itemize}
+\end{frame}
+
+\begin{frame}{Identificación OE: Evolución de Parámetros}
+\begin{center}
+\includegraphics[width=0.8\textwidth]{imagenes_identificacion_oe/oe_identification.png}
+\end{center}
+\begin{itemize}
+\item Algoritmo RLS diverge muy temprano (k=29) por overflow
+\item Parámetros identificados: $f_1=-4.67$, $f_2=-62.77$, $b_0=1.44$, $b_1=1.31$
+\item Modelo OE altamente inestable para este sistema
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Análisis: Convergencia de Parámetros OE}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{imagenes_identificacion_oe/oe_parameters.png}
+\end{center}
+\begin{itemize}
+\item $f_1$ (dinámico): Parámetros muy alejados de valores físicos
+\item $f_2$ (dinámico): Convergencia rápida pero a valores incorrectos
+\item $b_0$, $b_1$ (entrada): Parámetros de entrada identificados
+\item Convergencia numérica limitada por overflow
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Comparación OE vs Sistema Real}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{imagenes_identificacion_oe/oe_vs_linear.png}
+\end{center}
+\begin{itemize}
+\item OE falla completamente en la validación por overflow numérico
+\item Parámetros identificados físicamente incorrectos
+\item Modelo OE no adecuado para sistemas con dinámica inestable
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Interpretación de Parámetros OE}
+\begin{block}{Estructura del Modelo Output Error}
+\[
+y[k] = \frac{B(q)}{F(q)} u[k] + e[k]
+\]
+\end{block}
+
+\begin{block}{Significado de los Parámetros}
+\begin{itemize}
+\item $f_1, f_2$: Coeficientes del polinomio $F(q) = 1 + f_1 q^{-1} + f_2 q^{-2}$
+\item Representan la \textbf{dinámica del sistema} (como los polos)
+\item $b_0, b_1$: Coeficientes del polinomio $B(q) = b_0 + b_1 q^{-1}$
+\item Representan la \textbf{ganancia de entrada} (como los ceros)
+\item $e[k]$: Ruido blanco puro de medición
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{¿Por qué la Autocorrelación da Bien?}
+\begin{block}{Autocorrelación del Error}
+La autocorrelación mide si el error residual es ruido blanco, lo cual es una condición necesaria pero \textbf{no suficiente} para un buen modelo.
+\end{block}
+
+\begin{block}{Por qué puede dar bien en OE}
+\begin{itemize}
+\item El algoritmo RLS minimiza el error de predicción one-step-ahead
+\item Puede converger a parámetros que hacen que $e[k]$ parezca ruido blanco
+\item Pero estos parámetros pueden ser \textbf{físicamente incorrectos}
+\item En sistemas inestables, múltiples conjuntos de parámetros pueden dar la misma autocorrelación
+\item La validación física (simulación) revela el problema real
+\end{itemize}
+\end{block}
+\end{frame}
+
+\section{Control PID e Identificación en Lazo Cerrado}
+
+\begin{frame}{Control PID del Péndulo Inestable}
+\begin{block}{Enfoque Alternativo: Control + Identificación}
+Cuando el sistema abierto es inestable, una alternativa efectiva es:
+\begin{itemize}
+\item Implementar un controlador que estabilice el sistema
+\item Identificar el comportamiento del \textbf{sistema en lazo cerrado} (estable)
+\item Los parámetros identificados representan la dinámica global controlada
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Controlador PID Implementado}
+
+\begin{block}{Controlador PID Implementado}
+Se utilizó un controlador PID discreto con ganancias agresivas:
+\[
+u[k] = K_p e[k] + K_i \sum e[k] + K_d (e[k] - e[k-1])
+\]
+\begin{itemize}
+\item $K_p = 100.0$, $K_i = 10.0$, $K_d = 20.0$
+\item Saturación: $\pm 50$ unidades
+\item Tiempo de muestreo: $T_s = 0.02$ s
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Respuesta del Sistema Controlado}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{imagenes_identificacion_pi_control/pi_control_response.png}
+\end{center}
+\begin{itemize}
+\item Control exitoso del péndulo inestable
+\item Error estacionario: $< 0.001$ rad
+\item Tiempo de establecimiento: $\approx 0.7$ s
+\item Overshoot máximo: $\approx 0.39$ rad
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Identificación ARMAX en Lazo Cerrado}
+\begin{block}{Modelo ARMAX Identificado}
+Parámetros identificados del sistema en lazo cerrado:
+\[
+y[k] = -a_1 y[k-1] - a_2 y[k-2] + b_1 u[k-1] + b_2 u[k-2] + c_1 e[k-1] + e[k]
+\]
+\begin{itemize}
+\item $a_1 = -2.0063$ (sistema real discreto: $a_1 = -2.0063$)
+\item $a_2 = 1.0000$ (sistema real discreto: $a_2 = 1.0000$)
+\item $b_1 = 2.93 \times 10^{-4}$ (sistema real discreto: $b_1 = 2.93 \times 10^{-4}$)
+\item $b_2 = 2.93 \times 10^{-4}$ (sistema real discreto: $b_2 = 2.93 \times 10^{-4}$)
+\item $c_1 \approx 0$ (coeficiente de ruido)
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Identificación ARMAX en Lazo Cerrado}
+
+\begin{block}{Comparación de Polos}
+Polos del sistema identificado vs. sistema real discreto:
+\begin{itemize}
+\item Polos identificados: $z = 1.083, 0.924$
+\item Polos reales (sistema abierto): $z = -2.006, 1.000$
+\item Polos identificados dentro del círculo unitario ($|z| < 1$)
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Evolución de Parámetros ARMAX Lazo Cerrado}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{imagenes_identificacion_pi_control/armax_closed_loop_identification.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Validación del Modelo Identificado}
+\begin{center}
+\includegraphics[width=0.8\textwidth]{imagenes_identificacion_pi_control/armax_closed_loop_validation.png}
+\end{center}
+\begin{itemize}
+\item Comparación temporal: sistema real vs. modelo identificado
+\item Error de predicción: $RMSE = 1.70 \times 10^{33}$
+\item MSE validación: $2.90 \times 10^{66}$
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Conclusión: Control + Identificación en Lazo Cerrado}
+\begin{block}{Resultados del Enfoque Híbrido}
+\begin{itemize}
+\item Control PID: estabilización del péndulo inestable
+\item Identificación ARMAX: parámetros identificados en sistema controlado
+\item Sistema resultante: estable con dinámica modificada
 \end{itemize}
 \end{block}
 
-\begin{block}{Sistema Inestable (Péndulo vertical)}
+\begin{block}{Características del Enfoque}
 \begin{itemize}
-\item \times Identificación fallida por divergencia algorítmica
-\item \times Modelo identificado físicamente incorrecto
-\item \times Validación imposible por overflow numérico
+\item Control previo requerido para sistemas inestables
+\item Identificación posterior en lazo cerrado
+\item Parámetros representan dinámica global controlada
+\item Alternativa a identificación directa de sistemas abiertos
 \end{itemize}
-\end{block}
-
-\begin{block}{Lección Principal}
-Los sistemas estables permiten identificación paramétrica robusta,
-mientras que los sistemas inestables requieren enfoques fundamentalmente diferentes.
 \end{block}
 \end{frame}
 

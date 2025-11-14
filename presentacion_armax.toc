@@ -1,5 +1,0 @@
-\beamer@sectionintoc {1}{El Problema}{2}{0}{1}
-\beamer@sectionintoc {2}{El Diagnóstico}{3}{0}{2}
-\beamer@sectionintoc {3}{La Solución}{5}{0}{3}
-\beamer@sectionintoc {4}{Los Resultados}{6}{0}{4}
-\beamer@sectionintoc {5}{Conclusión}{9}{0}{5}

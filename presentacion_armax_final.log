@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.10.31)  14 NOV 2025 17:47
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.10.31)  14 NOV 2025 18:47
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -923,7 +923,8 @@ tex.def
 File: l3backend-pdftex.def 2024-01-04 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count349
 \l__pdf_internal_box=\box81
-) (presentacion_armax_final.aux)
+)
+No file presentacion_armax_final.aux.
 \openout1 = `presentacion_armax_final.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 19.
@@ -944,7 +945,6 @@ LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 19.
 LaTeX Font Info:    ... okay on input line 19.
 LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 19.
 LaTeX Font Info:    ... okay on input line 19.
-
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
 *geometry* verbose mode - [ preamble ] result:
@@ -1006,7 +1006,6 @@ fg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
 Package hyperref Info: Link coloring OFF on input line 19.
- (presentacion_armax_final.out) (presentacion_armax_final.out)
 \@outlinefile=\write5
 \openout5 = `presentacion_armax_final.out'.
 
@@ -1080,7 +1079,9 @@ Dictionary: translator-numbers-dictionary, Language: English
 (C:\Users\lucas\AppData\Local\Programs\MiKTeX\tex/latex/translator\translator-t
 heorem-dictionary-English.dict
 Dictionary: translator-theorem-dictionary, Language: English 
-) (presentacion_armax_final.nav)
+)
+No file presentacion_armax_final.nav.
+
 Overfull \hbox (75.05055pt too wide) in paragraph at lines 19--19
  [][]  \T1/lmss/m/n/6 ([])  
  []
@@ -1243,7 +1244,7 @@ Overfull \hbox (39.00871pt too wide) in paragraph at lines 101--101
  [][][][]  
  []
 
-<imagenes_identificacion/parameter_evolution.png, id=270, 859.2903pt x 570.6921
+<imagenes_identificacion/parameter_evolution.png, id=245, 859.2903pt x 570.6921
 pt>
 File: imagenes_identificacion/parameter_evolution.png Graphic file (type png)
 <use imagenes_identificacion/parameter_evolution.png>
@@ -1272,7 +1273,7 @@ Overfull \hbox (39.00871pt too wide) in paragraph at lines 111--111
  [][][][]  
  []
 
-<imagenes_identificacion/pole_stability.png, id=303, 714.7503pt x 570.4512pt>
+<imagenes_identificacion/pole_stability.png, id=278, 714.7503pt x 570.4512pt>
 File: imagenes_identificacion/pole_stability.png Graphic file (type png)
 <use imagenes_identificacion/pole_stability.png>
 Package pdftex.def Info: imagenes_identificacion/pole_stability.png  used on in
@@ -1322,7 +1323,7 @@ Overfull \hbox (39.00871pt too wide) in paragraph at lines 146--146
  [][][][]  
  []
 
-<imagenes_identificacion/rls_identification.png, id=383, 859.5312pt x 570.2103p
+<imagenes_identificacion/rls_identification.png, id=360, 859.5312pt x 570.2103p
 t>
 File: imagenes_identificacion/rls_identification.png Graphic file (type png)
 <use imagenes_identificacion/rls_identification.png>
@@ -1355,7 +1356,7 @@ Overfull \hbox (39.00871pt too wide) in paragraph at lines 158--158
  [][][][]  
  []
 
-<imagenes_identificacion/forced_response_comparison.png, id=414, 714.7503pt x 4
+<imagenes_identificacion/forced_response_comparison.png, id=390, 714.7503pt x 4
 26.1521pt>
 File: imagenes_identificacion/forced_response_comparison.png Graphic file (type
  png)
@@ -1389,7 +1390,7 @@ Overfull \hbox (39.00871pt too wide) in paragraph at lines 170--170
  [][][][]  
  []
 
-<imagenes_identificacion/validation_comparison.png, id=442, 859.2903pt x 570.21
+<imagenes_identificacion/validation_comparison.png, id=419, 859.2903pt x 570.21
 03pt>
 File: imagenes_identificacion/validation_comparison.png Graphic file (type png)
 
@@ -1414,13 +1415,17 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 [10
 
  <./imagenes_identificacion/validation_comparison.png>]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 190--190
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 200--200
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 190--190
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 200--200
  [][][][]  
+ []
+
+
+Overfull \vbox (4.6936pt too high) detected at line 200
  []
 
 
@@ -1436,20 +1441,16 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 [11
 
 ]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 209--209
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 220--220
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 209--209
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 220--220
  [][][][]  
  []
 
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 2
-09.
-(C:\Users\lucas\AppData\Local\Programs\MiKTeX\tex/latex/lm\t1lmtt.fd
-File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
+
 Overfull \hbox (75.05055pt too wide) has occurred while \output is active
  [][]  \T1/lmss/m/n/6 ([])  
  []
@@ -1462,17 +1463,13 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 [12
 
 ]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 237--237
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 240--240
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 237--237
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 240--240
  [][][][]  
- []
-
-
-Overfull \vbox (4.6936pt too high) detected at line 237
  []
 
 
@@ -1488,13 +1485,25 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 [13
 
 ]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 257--257
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 252--252
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 257--257
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 252--252
  [][][][]  
+ []
+
+<imagenes_identificacion_vertical/parameter_evolution_vertical.png, id=580, 859
+.2903pt x 570.6921pt>
+File: imagenes_identificacion_vertical/parameter_evolution_vertical.png Graphic
+ file (type png)
+<use imagenes_identificacion_vertical/parameter_evolution_vertical.png>
+Package pdftex.def Info: imagenes_identificacion_vertical/parameter_evolution_v
+ertical.png  used on input line 252.
+(pdftex.def)             Requested size: 273.9493pt x 181.93726pt.
+
+Overfull \vbox (18.39566pt too high) detected at line 252
  []
 
 
@@ -1509,14 +1518,26 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 
 [14
 
-]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 277--277
+ <./imagenes_identificacion_vertical/parameter_evolution_vertical.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 263--263
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 277--277
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 263--263
  [][][][]  
+ []
+
+<imagenes_identificacion_vertical/rls_identification_vertical.png, id=609, 859.
+0494pt x 570.2103pt>
+File: imagenes_identificacion_vertical/rls_identification_vertical.png Graphic 
+file (type png)
+<use imagenes_identificacion_vertical/rls_identification_vertical.png>
+Package pdftex.def Info: imagenes_identificacion_vertical/rls_identification_ve
+rtical.png  used on input line 263.
+(pdftex.def)             Requested size: 273.9493pt x 181.83586pt.
+
+Overfull \vbox (30.39478pt too high) detected at line 263
  []
 
 
@@ -1531,28 +1552,24 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 
 [15
 
-]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 289--289
+ <./imagenes_identificacion_vertical/rls_identification_vertical.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 270--270
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 289--289
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 270--270
  [][][][]  
  []
 
-<imagenes_identificacion_vertical/parameter_evolution_vertical.png, id=692, 859
-.2903pt x 570.6921pt>
-File: imagenes_identificacion_vertical/parameter_evolution_vertical.png Graphic
- file (type png)
-<use imagenes_identificacion_vertical/parameter_evolution_vertical.png>
-Package pdftex.def Info: imagenes_identificacion_vertical/parameter_evolution_v
-ertical.png  used on input line 289.
-(pdftex.def)             Requested size: 273.9493pt x 181.93726pt.
-
-Overfull \vbox (18.39566pt too high) detected at line 289
- []
-
+<imagenes_identificacion_vertical/pole_stability_vertical.png, id=650, 714.7503
+pt x 570.4512pt>
+File: imagenes_identificacion_vertical/pole_stability_vertical.png Graphic file
+ (type png)
+<use imagenes_identificacion_vertical/pole_stability_vertical.png>
+Package pdftex.def Info: imagenes_identificacion_vertical/pole_stability_vertic
+al.png  used on input line 270.
+(pdftex.def)             Requested size: 239.70367pt x 191.31342pt.
 
 Overfull \hbox (75.05055pt too wide) has occurred while \output is active
  [][]  \T1/lmss/m/n/6 ([])  
@@ -1565,27 +1582,167 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 
 [16
 
- <./imagenes_identificacion_vertical/parameter_evolution_vertical.png>]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 307--307
+ <./imagenes_identificacion_vertical/pole_stability_vertical.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 290--290
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 307--307
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 290--290
  [][][][]  
  []
 
-<imagenes_identificacion_vertical/pole_stability_vertical.png, id=721, 714.7503
-pt x 570.4512pt>
-File: imagenes_identificacion_vertical/pole_stability_vertical.png Graphic file
- (type png)
-<use imagenes_identificacion_vertical/pole_stability_vertical.png>
-Package pdftex.def Info: imagenes_identificacion_vertical/pole_stability_vertic
-al.png  used on input line 307.
-(pdftex.def)             Requested size: 239.70367pt x 191.31342pt.
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
 
-Overfull \vbox (72.1389pt too high) detected at line 307
- []
+! Extra }, or forgotten $.
+<template> \unskip \hfil }
+                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
+l.290 \end{frame}
+                 
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing } inserted.
+<inserted text> 
+                }
+l.290 \end{frame}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Extra }, or forgotten $.
+<template> \unskip \hfil }
+                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
+l.290 \end{frame}
+                 
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing } inserted.
+<inserted text> 
+                }
+l.290 \end{frame}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Extra }, or forgotten $.
+<template> \unskip \hfil }
+                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
+l.290 \end{frame}
+                 
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing } inserted.
+<inserted text> 
+                }
+l.290 \end{frame}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Extra }, or forgotten $.
+<template> \unskip \hfil }
+                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
+l.290 \end{frame}
+                 
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.290 \end{frame}
+                 
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing } inserted.
+<inserted text> 
+                }
+l.290 \end{frame}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
 
 
 Overfull \hbox (75.05055pt too wide) has occurred while \output is active
@@ -1599,111 +1756,634 @@ Overfull \hbox (39.00871pt too wide) has occurred while \output is active
 
 [17
 
- <./imagenes_identificacion_vertical/pole_stability_vertical.png>]
-Overfull \hbox (75.05055pt too wide) in paragraph at lines 327--327
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 302--302
  [][]  \T1/lmss/m/n/6 ([])  
  []
 
 
-Overfull \hbox (39.00871pt too wide) in paragraph at lines 327--327
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 302--302
  [][][][]  
  []
 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Extra }, or forgotten $.
-<template> \unskip \hfil }
-                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
-l.327 \end{frame}
-                 
-? 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Missing } inserted.
-<inserted text> 
-                }
-l.327 \end{frame}
-                 
-? 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Extra }, or forgotten $.
-<template> \unskip \hfil }
-                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
-l.327 \end{frame}
-                 
-? 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Missing } inserted.
-<inserted text> 
-                }
-l.327 \end{frame}
-                 
-? 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Extra }, or forgotten $.
-<template> \unskip \hfil }
-                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
-l.327 \end{frame}
-                 
-? 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Missing } inserted.
-<inserted text> 
-                }
-l.327 \end{frame}
-                 
-? 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Extra }, or forgotten $.
-<template> \unskip \hfil }
-                          \hskip \tabcolsep \hskip -.5\arrayrulewidth \vrule...
-l.327 \end{frame}
-                 
-? 
-! Missing $ inserted.
-<inserted text> 
-                $
-l.327 \end{frame}
-                 
-? 
-! Missing } inserted.
-<inserted text> 
-                }
-l.327 \end{frame}
-                 
-? 
+<imagenes_identificacion_vertical/validation_comparison_vertical.png, id=706, 8
+59.2903pt x 570.2103pt>
+File: imagenes_identificacion_vertical/validation_comparison_vertical.png Graph
+ic file (type png)
+<use imagenes_identificacion_vertical/validation_comparison_vertical.png>
+Package pdftex.def Info: imagenes_identificacion_vertical/validation_comparison
+_vertical.png  used on input line 302.
+(pdftex.def)             Requested size: 342.43532pt x 227.2274pt.
 
-Overfull \hbox (75.05055pt too 
+Overfull \vbox (63.6858pt too high) detected at line 302
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[18
+
+ <./imagenes_identificacion_vertical/validation_comparison_vertical.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 322--322
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 322--322
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[19
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 339--339
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 339--339
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[20
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 358--358
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 358--358
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[21
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 369--369
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 369--369
+ [][][][]  
+ []
+
+<imagenes_identificacion_narx/narx_identification.png, id=866, 858.3267pt x 570
+.2103pt>
+File: imagenes_identificacion_narx/narx_identification.png Graphic file (type p
+ng)
+<use imagenes_identificacion_narx/narx_identification.png>
+Package pdftex.def Info: imagenes_identificacion_narx/narx_identification.png  
+used on input line 369.
+(pdftex.def)             Requested size: 273.9493pt x 181.99248pt.
+
+Overfull \vbox (18.45088pt too high) detected at line 369
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[22
+
+ <./imagenes_identificacion_narx/narx_identification.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 381--381
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 381--381
+ [][][][]  
+ []
+
+<imagenes_identificacion_narx/narx_parameters.png, id=895, 857.3631pt x 569.487
+6pt>
+File: imagenes_identificacion_narx/narx_parameters.png Graphic file (type png)
+<use imagenes_identificacion_narx/narx_parameters.png>
+Package pdftex.def Info: imagenes_identificacion_narx/narx_parameters.png  used
+ on input line 381.
+(pdftex.def)             Requested size: 308.18968pt x 204.71124pt.
+
+Overfull \vbox (41.778pt too high) detected at line 381
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[23
+
+ <./imagenes_identificacion_narx/narx_parameters.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 392--392
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 392--392
+ [][][][]  
+ []
+
+<imagenes_identificacion_narx/narx_vs_linear.png, id=924, 859.2903pt x 425.9112
+pt>
+File: imagenes_identificacion_narx/narx_vs_linear.png Graphic file (type png)
+<use imagenes_identificacion_narx/narx_vs_linear.png>
+Package pdftex.def Info: imagenes_identificacion_narx/narx_vs_linear.png  used 
+on input line 392.
+(pdftex.def)             Requested size: 308.18968pt x 152.756pt.
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[24
+
+ <./imagenes_identificacion_narx/narx_vs_linear.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 413--413
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 413--413
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[25
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 420--420
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 420--420
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[26
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 431--431
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 431--431
+ [][][][]  
+ []
+
+<imagenes_identificacion_oe/oe_identification.png, id=1033, 859.2903pt x 570.45
+12pt>
+File: imagenes_identificacion_oe/oe_identification.png Graphic file (type png)
+<use imagenes_identificacion_oe/oe_identification.png>
+Package pdftex.def Info: imagenes_identificacion_oe/oe_identification.png  used
+ on input line 431.
+(pdftex.def)             Requested size: 273.9493pt x 181.86046pt.
+
+Overfull \vbox (18.31886pt too high) detected at line 431
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[27
+
+ <./imagenes_identificacion_oe/oe_identification.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 443--443
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 443--443
+ [][][][]  
+ []
+
+<imagenes_identificacion_oe/oe_parameters.png, id=1062, 857.1222pt x 569.4876pt
+>
+File: imagenes_identificacion_oe/oe_parameters.png Graphic file (type png)
+<use imagenes_identificacion_oe/oe_parameters.png>
+Package pdftex.def Info: imagenes_identificacion_oe/oe_parameters.png  used on 
+input line 443.
+(pdftex.def)             Requested size: 308.18968pt x 204.77206pt.
+
+Overfull \vbox (41.23047pt too high) detected at line 443
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[28
+
+ <./imagenes_identificacion_oe/oe_parameters.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 454--454
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 454--454
+ [][][][]  
+ []
+
+<imagenes_identificacion_oe/oe_vs_linear.png, id=1091, 859.2903pt x 425.9112pt>
+
+File: imagenes_identificacion_oe/oe_vs_linear.png Graphic file (type png)
+<use imagenes_identificacion_oe/oe_vs_linear.png>
+Package pdftex.def Info: imagenes_identificacion_oe/oe_vs_linear.png  used on i
+nput line 454.
+(pdftex.def)             Requested size: 308.18968pt x 152.756pt.
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[29
+
+ <./imagenes_identificacion_oe/oe_vs_linear.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 472--472
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 472--472
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[30
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 488--488
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 488--488
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[31
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 501--501
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 501--501
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[32
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 516--516
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 516--516
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[33
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 528--528
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 528--528
+ [][][][]  
+ []
+
+<imagenes_identificacion_pi_control/pi_control_response.png, id=1303, 859.2903p
+t x 425.9112pt>
+File: imagenes_identificacion_pi_control/pi_control_response.png Graphic file (
+type png)
+<use imagenes_identificacion_pi_control/pi_control_response.png>
+Package pdftex.def Info: imagenes_identificacion_pi_control/pi_control_response
+.png  used on input line 528.
+(pdftex.def)             Requested size: 308.18968pt x 152.756pt.
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[34
+
+ <./imagenes_identificacion_pi_control/pi_control_response.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 544--544
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 544--544
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[35
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 556--556
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 556--556
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[36
+
+]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 562--562
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 562--562
+ [][][][]  
+ []
+
+<imagenes_identificacion_pi_control/armax_closed_loop_identification.png, id=14
+10, 859.2903pt x 570.4512pt>
+File: imagenes_identificacion_pi_control/armax_closed_loop_identification.png G
+raphic file (type png)
+<use imagenes_identificacion_pi_control/armax_closed_loop_identification.png>
+Package pdftex.def Info: imagenes_identificacion_pi_control/armax_closed_loop_i
+dentification.png  used on input line 562.
+(pdftex.def)             Requested size: 308.18968pt x 204.59628pt.
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[37
+
+ <./imagenes_identificacion_pi_control/armax_closed_loop_identification.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 573--573
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 573--573
+ [][][][]  
+ []
+
+<imagenes_identificacion_pi_control/armax_closed_loop_validation.png, id=1440, 
+859.2903pt x 425.9112pt>
+File: imagenes_identificacion_pi_control/armax_closed_loop_validation.png Graph
+ic file (type png)
+<use imagenes_identificacion_pi_control/armax_closed_loop_validation.png>
+Package pdftex.def Info: imagenes_identificacion_pi_control/armax_closed_loop_v
+alidation.png  used on input line 573.
+(pdftex.def)             Requested size: 273.9493pt x 135.78094pt.
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[38
+
+ <./imagenes_identificacion_pi_control/armax_closed_loop_validation.png>]
+Overfull \hbox (75.05055pt too wide) in paragraph at lines 592--592
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) in paragraph at lines 592--592
+ [][][][]  
+ []
+
+
+Overfull \hbox (75.05055pt too wide) has occurred while \output is active
+ [][]  \T1/lmss/m/n/6 ([])  
+ []
+
+
+Overfull \hbox (39.00871pt too wide) has occurred while \output is active
+ [][][][]  
+ []
+
+[39
+
+]
+\tf@nav=\write6
+\openout6 = `presentacion_armax_final.nav'.
+
+\tf@toc=\write7
+\openout7 = `presentacion_armax_final.toc'.
+
+\tf@snm=\write8
+\openout8 = `presentacion_armax_final.snm'.
+
+ (presentacion_armax_final.aux)
+ ***********
+LaTeX2e <2023-11-01> patch level 1
+L3 programming layer <2024-01-04>
+ ***********
+
+
+Package rerunfilecheck Warning: File `presentacion_armax_final.out' has changed
+.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+Package rerunfilecheck Info: Checksums for `presentacion_armax_final.out':
+(rerunfilecheck)             Before: <no file>
+(rerunfilecheck)             After:  E8DF44F2C603B50981131DE8C923B2B8;1593.
+ ) 
+Here is how much of TeX's memory you used:
+ 25528 strings out of 474486
+ 521452 string characters out of 5743754
+ 1942542 words of memory out of 5000000
+ 47200 multiletter control sequences out of 15000+600000
+ 599245 words of font info for 66 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 128i,15n,123p,422b,685s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmex10.pf
+b><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi10.pf
+b><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi8.pfb
+><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmss10.pfb
+><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmss12.pfb
+><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmss8.pfb>
+<C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmssbx10.pf
+b><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsso10.p
+fb><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsso8.p
+fb><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsy10.p
+fb><C:/Users/lucas/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsy8.pf
+b>
+Output written on presentacion_armax_final.pdf (39 pages, 6950593 bytes).
+PDF statistics:
+ 1596 PDF objects out of 1728 (max. 8388607)
+ 87 named destinations out of 1000 (max. 500000)
+ 1291 words of extra memory for PDF output out of 10000 (max. 10000000)
+

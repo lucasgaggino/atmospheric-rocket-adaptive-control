@@ -2,5 +2,7 @@
 \beamer@sectionintoc {2}{El Diagnóstico}{5}{0}{2}
 \beamer@sectionintoc {3}{La Solución}{7}{0}{3}
 \beamer@sectionintoc {4}{Los Resultados}{8}{0}{4}
-\beamer@sectionintoc {5}{Conclusión}{11}{0}{5}
-\beamer@sectionintoc {6}{Identificación del Sistema Inestable: Péndulo Vertical}{13}{0}{6}
+\beamer@sectionintoc {5}{Identificación del Sistema Inestable: Péndulo Vertical}{11}{0}{5}
+\beamer@sectionintoc {6}{Modelo NARX: Captura de No Linealidades}{21}{0}{6}
+\beamer@sectionintoc {7}{Modelo Output Error (OE): Ruido Aditivo Puro}{25}{0}{7}
+\beamer@sectionintoc {8}{Control PID e Identificación en Lazo Cerrado}{32}{0}{8}
