@@ -1,0 +1,6 @@
+\beamer@sectionintoc {1}{El Sistema}{2}{0}{1}
+\beamer@sectionintoc {2}{El Diagnóstico}{5}{0}{2}
+\beamer@sectionintoc {3}{La Solución}{7}{0}{3}
+\beamer@sectionintoc {4}{Los Resultados}{8}{0}{4}
+\beamer@sectionintoc {5}{Conclusión}{11}{0}{5}
+\beamer@sectionintoc {6}{Identificación del Sistema Inestable: Péndulo Vertical}{13}{0}{6}

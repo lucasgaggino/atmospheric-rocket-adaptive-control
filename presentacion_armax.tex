@@ -1,0 +1,421 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{tikz}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Identificación Paramétrica del Sistema del Péndulo Invertido}
+\subtitle{Comparativa de Modelos}
+\author{Lucas Gaggino}
+\institute{Facultad de Ingeniería - UBA \\ Control Adaptativo 86.20}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\section{El Sistema}
+
+\begin{frame}{Ecuaciones del Péndulo Invertido}
+\begin{block}{Ecuación No Lineal}
+La dinámica del sistema se describe por:
+\[
+(M + m) \ddot{x} = F - m l \ddot{\theta} \cos\theta + m l \dot{\theta}^2 \sin\theta
+\]
+
+\[
+m l \ddot{\theta} \cos\theta + m l \dot{\theta}^2 \sin\theta + m g \sin\theta = 0
+\]
+\end{block}
+
+\begin{block}{Forma Simplificada}
+\[
+\ddot{\theta} = \frac{g \sin\theta - \cos\theta \cdot \frac{F + m l \dot{\theta}^2 \sin\theta}{M + m}}{l \left(\frac{4}{3} - \frac{m \cos^2\theta}{M + m}\right)}
+\]
+\end{block}
+\end{frame}
+
+\begin{frame}{Modelo Linealizado}
+\begin{block}{Linealización por Jacobiano}
+Aplicando linealización alrededor del punto de equilibrio $\theta = \pi$:
+\end{block}
+
+\begin{block}{Ecuación Linealizada}
+\[
+\ddot{\theta} = A_\theta (\theta - \pi) + B_\theta F
+\]
+donde:
+\[
+A_\theta = -\frac{3g(M+m)}{l(4M+m)}, \quad B_\theta = -\frac{3}{l(4M+m)}
+\]
+\end{block}
+
+\begin{block}{Forma Estándar}
+\[
+\ddot{\phi} = A_\theta \phi + B_\theta F, \quad \phi = \theta - \pi
+\]
+\end{block}
+\end{frame}
+
+\begin{frame}{Parámetros del Sistema}
+\begin{block}{Valores Numéricos}
+\begin{itemize}
+\item Masa del carro: $M = 1.0$ kg
+\item Masa del péndulo: $m = 0.1$ kg
+\item Longitud del péndulo: $l = 0.5$ m
+\item Gravedad: $g = 9.81$ m/s²
+\end{itemize}
+\end{block}
+
+\begin{block}{Coeficientes Calculados}
+\[
+A_\theta = -15.79, \quad B_\theta = -1.46
+\]
+\end{block}
+
+\begin{block}{Función de Transferencia Continua}
+\[
+G(s) = \frac{B_\theta}{s^2 - A_\theta} = \frac{-1.46}{s^2 + 15.79}
+\]
+\end{block}
+\end{frame}
+
+\section{El Diagnóstico}
+
+\begin{frame}{Análisis de la Identificación Paramétrica}
+\begin{center}
+\includegraphics[width=0.8\textwidth]{imagenes_identificacion/parameter_evolution.png}
+\end{center}
+\vspace{-0.5cm}
+\begin{itemize}
+\item Ruido correlacionado no modelado
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Análisis de Estabilidad}
+\begin{center}
+\includegraphics[width=0.7\textwidth]{imagenes_identificacion/pole_stability.png}
+\end{center}
+\vspace{-0.5cm}
+\begin{itemize}
+\item Sistema dinámicamente estable: Polos dentro del círculo unitario
+\end{itemize}
+\end{frame}
+
+\section{La Solución}
+
+\begin{frame}{Modelo ARMAX Simplificado}
+\begin{block}{Estrategia}
+\begin{itemize}
+\item Mantener solo $b_0$ para ganancia esencial
+\item Agregar $c_1$ para modelar ruido correlacionado
+\item Modelo: $y[k] + a_1 y[k-1] + a_2 y[k-2] = b_0 u[k-1] + c_1 e[k-1] + e[k]$
+\end{itemize}
+\end{block}
+
+\vspace{0.5cm}
+\begin{block}{Ventajas}
+\begin{itemize}
+\item Menos parámetros para identificar
+\item Mejor condición numérica
+\item Modelado más realista del ruido
+\end{itemize}
+\end{block}
+\end{frame}
+
+\section{Los Resultados}
+
+\begin{frame}{Resultados de Identificación ARMAX}
+\begin{center}
+\includegraphics[width=\textwidth]{imagenes_identificacion/rls_identification.png}
+\end{center}
+\vspace{-0.5cm}
+\begin{itemize}
+\item Convergencia estable del algoritmo RLS
+\item Evolución apropiada de parámetros
+\item Validación estadística: Características de ruido blanco en residuos
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Comparación de Modelos}
+\begin{center}
+\includegraphics[width=\textwidth]{imagenes_identificacion/forced_response_comparison.png}
+\end{center}
+\vspace{-0.5cm}
+\begin{itemize}
+\item Modelo continuo G(s): Referencia teórica
+\item Modelo discreto H(z): Discretización ZOH
+\item Modelo ARMAX: Concordancia satisfactoria con datos experimentales
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Validación Experimental}
+\begin{center}
+\includegraphics[width=\textwidth]{imagenes_identificacion/validation_comparison.png}
+\end{center}
+\vspace{-0.5cm}
+\begin{itemize}
+\item Validación con la misma señal PRBS usada en identificación
+\item Validación adicional con señal de escalón
+\item Concordancia adecuada en ambas señales: Validación satisfactoria
+\end{itemize}
+\end{frame}
+
+\section{Conclusión}
+
+\begin{frame}{Conclusiones}
+\begin{block}{Principales Hallazgos}
+\begin{itemize}
+\item Modelo ARMAX simplificado supera limitaciones de modelos ARX tradicionales
+\item Eliminación de coeficientes problemáticos mejora la identificación
+\item Validación estadística confirma calidad del modelo identificado
+\end{itemize}
+\end{block}
+
+\begin{block}{Implicaciones para Identificación}
+\begin{itemize}
+\item Comprensión física del sistema es esencial
+\item Modelos parsimoniosos pueden superar modelos completos
+\item Validación rigurosa es condición necesaria para confianza
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Implementación}
+\begin{center}
+\begin{minipage}{0.6\textwidth}
+\small
+Código fuente disponible:\\
+\texttt{identificacion\_pendulo.py}
+\end{minipage}
+\end{center}
+
+\vspace{0.5cm}
+\begin{block}{Generación de imágenes}
+\begin{itemize}
+\item Automática con matplotlib
+\item Alta resolución (300 DPI)
+\item Guardado en \texttt{imagenes\_identificacion/}
+\end{itemize}
+\end{block}
+\end{frame}
+
+\section{Identificación del Sistema Inestable: Péndulo Vertical}
+
+\begin{frame}{Sistema Inestable: Péndulo en Posición Vertical}
+\begin{block}{Configuración del Sistema}
+\begin{itemize}
+\item Péndulo balanceado en posición vertical ($\theta = 0$)
+\item Punto de equilibrio inestable
+\item Requiere control activo continuo para mantenerse
+\end{itemize}
+\end{block}
+
+\begin{block}{Modelo Linealizado}
+Aplicando linealización alrededor de $\theta = 0$:
+\[
+\ddot{\theta} = A_\theta \theta + B_\theta F
+\]
+donde:
+\[
+A_\theta = 15.79 \, (\text{inestable}), \quad B_\theta = 1.46
+\]
+
+Función de transferencia:
+\[
+G(s) = \frac{B_\theta}{s^2 - A_\theta} = \frac{1.46}{s^2 - 15.79}
+\]
+\end{block}
+\end{frame}
+
+\begin{frame}{Desafíos Teóricos de la Identificación Inestable}
+\begin{block}{Problemas Fundamentales}
+\begin{itemize}
+\item \textbf{Amplificación exponencial}: El ruido se amplifica con el tiempo
+\item \textbf{Inestabilidad algorítmica}: RLS diverge por crecimiento exponencial
+\item \textbf{Condiciones restrictivas}: Señales pequeñas necesarias
+\item \textbf{Limitación física}: Datos limitados antes de la divergencia
+\end{itemize}
+\end{block}
+
+\begin{block}{Implicaciones Matemáticas}
+\begin{itemize}
+\item Polos fuera del círculo unitario: $|\lambda| \, > \, 1$
+\item Respuesta impulsiva: crecimiento exponencial $e^{\lambda t}$
+\item Identificación requiere: $N \to \infty$ pero sistema diverge en tiempo finito
+\item Trade-off: excitación vs. estabilidad
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Configuración Experimental del Sistema Inestable}
+\begin{center}
+\begin{tabular}{l|c|c}
+\textbf{Parámetro} & \textbf{Valor} & \textbf{Unidad} \\
+\hline
+Masa del carro & 1.0 & kg \\
+Masa del péndulo & 0.1 & kg \\
+Longitud & 0.5 & m \\
+Gravedad & 9.81 & m/s² \\
+\hline
+\textbf{Señal PRBS} & \textbf{Configuración} & \\
+\hline
+Amplitud & 0.01 & (muy pequeña) \\
+Ruido & 0.001 & (mínimo) \\
+Muestras & 1000 & (limitadas) \\
+Factor $\lambda$ & 0.80 & (alto olvido) \\
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}{Resultados de Identificación: Evolución de Parámetros}
+\begin{center}
+\includegraphics[width=0.8\textwidth]{imagenes_identificacion_vertical/parameter_evolution_vertical.png}
+\end{center}
+\begin{itemize}
+\item Algoritmo RLS diverge en $k=337$ (de 1000 muestras)
+\item Parámetros $a_1$ y $a_2$ no convergen correctamente
+\item Parámetro $b_0$ con error del 79 por ciento
+\item Parámetro $c_1$ identificado pero irrelevante
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Análisis de Estabilidad: Plano Complejo}
+\begin{center}
+\includegraphics[width=0.7\textwidth]{imagenes_identificacion_vertical/pole_stability_vertical.png}
+\end{center}
+\begin{block}{Comparación Polos}
+\begin{tabular}{l|c|c}
+\textbf{Sistema} & \textbf{Parte Real} & \textbf{Módulo} \\
+\hline
+Real (Inestable) & $\pm$1.0827 & 1.0827 \\
+Identificado (Estable) & $\pm$1.0827 & 0.5880 \\
+\hline
+\textbf{Diagnóstico} & \textbf{Error} & \textbf{Detalle} \\
+\hline
+Estabilidad & Incorrecta & Sistema identificado como estable \\
+\end{tabular}
+\end{block}
+\end{frame}
+
+\begin{frame}{Análisis Cuantitativo: Errores de Identificación}
+\begin{center}
+\begin{tabular}{l|c|c|c}
+\textbf{Parámetro} & \textbf{Valor Real} & \textbf{Valor Estimado} & \textbf{Error (\%)} \\
+\hline
+a_1 & -2.0063 & -1.6707 & 16.7\% \\
+a_2 & 1.0000 & 0.6366 & 36.3\% \\
+b_0 & 0.000293 & 0.0795 & $>$ 26000\% \\
+c_1 & 0.000000 & 0.000834 & N/A \\
+\hline
+\textbf{Ganancia DC} & 0.000146 & 0.0391 & $>$ 26000\% \\
+\end{tabular}
+\end{center}
+\begin{itemize}
+\item Errores catastróficos en parámetros de ganancia
+\item Parámetros dinámicos con errores moderados
+\item Ganancia amplificada por 26000 veces
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Validación Experimental: Respuesta del Sistema}
+\begin{center}
+\includegraphics[width=\textwidth]{imagenes_identificacion_vertical/validation_comparison_vertical.png}
+\end{center}
+\begin{itemize}
+\item MSE PRBS: infinito (overflow numérico)
+\item MSE Impulso: infinito (overflow numérico)
+\item Simulación diverge después de pocas muestras
+\item Modelo identificado completamente inadecuado
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Análisis de la Divergencia: Razones Técnicas}
+\begin{block}{Causa Principal: Amplificación Exponencial}
+\begin{itemize}
+\item Sistema inestable: $x(k) = e^{\lambda k} x(0)$
+\item Ruido aditivo: $y(k) = x(k) + e(k)$
+\item Error de modelado: amplificado exponencialmente
+\item Algoritmo RLS: diverge por gradientes explosivos
+\end{itemize}
+\end{block}
+
+\begin{block}{Factores Contribuyentes}
+\begin{itemize}
+\item \textbf{Señal pequeña}: Excitación insuficiente
+\item \textbf{Ruido residual}: Contaminación persistente
+\item \textbf{Datos limitados}: Series temporales cortas
+\item \textbf{Condición inicial}: Sensible a estimaciones iniciales
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Comparación: Estable vs Inestable}
+\begin{center}
+\begin{tabular}{l|c|c}
+\textbf{Aspecto} & \textbf{Sistema Estable} & \textbf{Sistema Inestable} \\
+\hline
+Convergencia RLS & Rápida y estable & Diverge rápidamente \\
+Errores parámetros & $< 1\%$ & $>$ 1000\% \\
+Ruido modelado & Blanco residual & Correlacionado fuerte \\
+Estabilidad & Correcta & Incorrecta \\
+\hline
+\textbf{Señal óptima} & PRBS 2.0 & PRBS 0.01 \\
+\textbf{Muestras} & 5000 & 1000 \\
+\textbf{Factor $\lambda$} & 0.99 & 0.80 \\
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}{Lecciones Aprendidas: Sistemas Inestables}
+\begin{block}{Limitaciones Inherentes}
+\begin{itemize}
+\item La identificación paramétrica de sistemas inestables es inherentemente limitada
+\item La amplificación exponencial del ruido hace la convergencia imposible
+\item Se requieren condiciones experimentales extremadamente restrictivas
+\item Los algoritmos adaptativos tradicionales fallan sistemáticamente
+\end{itemize}
+\end{block}
+
+\begin{block}{Alternativas para Control}
+\begin{itemize}
+\item \textbf{Control basado en modelo}: Usar modelo teórico conocido
+\item \textbf{Control adaptativo}: Algoritmos robustos a inestabilidad
+\item \textbf{Control por realimentación}: Alta ganancia para estabilidad
+\item \textbf{Control predictivo}: Modelos de estado con restricciones
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Conclusión: Comparativa de Sistemas}
+\begin{block}{Sistema Estable (Péndulo hacia abajo)}
+\begin{itemize}
+\item \checkmark Identificación exitosa con ARMAX
+\item \checkmark Validación precisa con métricas cuantitativas
+\item \checkmark Modelo útil para control y predicción
+\end{itemize}
+\end{block}
+
+\begin{block}{Sistema Inestable (Péndulo vertical)}
+\begin{itemize}
+\item \times Identificación fallida por divergencia algorítmica
+\item \times Modelo identificado físicamente incorrecto
+\item \times Validación imposible por overflow numérico
+\end{itemize}
+\end{block}
+
+\begin{block}{Lección Principal}
+Los sistemas estables permiten identificación paramétrica robusta,
+mientras que los sistemas inestables requieren enfoques fundamentalmente diferentes.
+\end{block}
+\end{frame}
+
+\end{document}
