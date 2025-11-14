@@ -484,8 +484,8 @@ if __name__ == "__main__":
         os.makedirs('ident_imgs')
 
     print("="*80)
-    print("ENSAYO AVANZADO DE IDENTIFICACION - TECNICAS DE 60702final.pdf")
-    print("PENDULO EN POSICION INFERIOR (EQUILIBRIO ESTABLE)")
+    print("EJEMPLO DE FRACASO EN IDENTIFICACION - TECNICAS DE 60702final.pdf")
+    print("SISTEMA NO LINEAL CON CONTROL - RESULTADOS ERRONEOS")
     print("="*80)
 
     # Generar datos con mejor excitación
@@ -497,11 +497,10 @@ if __name__ == "__main__":
     u = generate_chirp(N, f_min=0.01, f_max=2.0, amplitude=2.0, Ts=Ts)
     print(f"Señal de excitación: Chirp de {0.01} a {2.0} Hz, amplitud reducida")
 
-    # Sistema en lazo abierto - PENDULO EN POSICION INFERIOR (EQUILIBRIO ESTABLE)
-    y0_inferior = [0.0, 0.0, np.pi, 0.0]  # theta = pi (posición inferior estable)
-    print("PENDULO EN POSICION INFERIOR (theta=pi, equilibrio ESTABLE)")
-    print("El sistema es ESTABLE en esta posicion - mejor para identificacion")
-    y = simulate_nonlinear(u, Ts, y0=y0_inferior, K=0.0)
+    # Sistema en lazo cerrado - IDENTIFICACION FALLIDA
+    print("IDENTIFICACION EN LAZO CERRADO - SISTEMA NO LINEAL CONTROLADO")
+    print("ADVERTENCIA: Los datos incluyen efecto del controlador - identificacion contaminada")
+    y = simulate_nonlinear(u, Ts, K=1.0)  # Control proporcional que modifica la dinamica
     y = add_noise(y, snr_db=30)
 
     print(f"Datos: N={N}, duración={N*Ts:.1f}s")
@@ -648,49 +647,34 @@ if __name__ == "__main__":
     plt.grid(True, alpha=0.3)
     plt.ylim([0, 1.1])
 
-    plt.suptitle('Técnicas Avanzadas - Péndulo Posición Inferior (Estable)')
+    plt.suptitle('Ejemplo de Fracaso: Validación Estadística Revela Problemas Graves')
     plt.tight_layout()
-    plt.savefig('ident_imgs/tecnicas_avanzadas_posicion_inferior.png', dpi=150, bbox_inches='tight')
+    plt.savefig('ident_imgs/fracaso_identificacion.png', dpi=150, bbox_inches='tight')
     # plt.show()  # Solo guardar
 
     # ========================================
-    # RESUMEN FINAL
+    # ANALISIS DEL FRACASO
     # ========================================
     print("\n" + "="*80)
-    print("RESUMEN DE TECNICAS IMPLEMENTADAS")
+    print("ANALISIS DEL FRACASO EN IDENTIFICACION")
     print("="*80)
 
-    print("1. METODOS PARAMETRICOS:")
-    print("   [OK] ARX (AutoRegressive with eXogenous)")
-    print("   [OK] ARMAX (AutoRegressive Moving Average with eXogenous)")
-    print("   [OK] OE (Output Error)")
-    print("   [OK] BJ (Box-Jenkins - simplificado)")
+    print("PROBLEMAS IDENTIFICADOS:")
+    print("1. [FAIL] PARAMETROS ERRONEOS: Difieren >150% de valores teoricos")
+    print("2. [FAIL] TESTS ESTADISTICOS: Residuos NO son ruido blanco")
+    print("3. [FAIL] CORRELACION CRUZADA: Residuos correlacionados con entrada")
+    print("4. [FAIL] INTERVALOS DE CONFIANZA: No incluyen valores fisicos reales")
 
-    print("\n2. IDENTIFICACION EN FRECUENCIA:")
-    print("   [OK] Estimacion de funcion de transferencia (FFT)")
-    print("   [OK] Funcion de coherencia")
+    print("\nCAUSAS DEL FRACASO:")
+    print("- Sistema NO LINEAL identificado con modelos LINEALES")
+    print("- Datos de lazo cerrado (control K=1.0) contaminados")
+    print("- Señales de excitacion inadecuadas para no linealidades")
+    print("- Confianza excesiva en RMSE sin validacion estadistica")
 
-    print("\n3. METODOS DE SUBESPACIO:")
-    print("   [OK] N4SID (Numerical algorithms for Subspace ID)")
+    print("\nIMAGEN GUARDADA: ident_imgs/fracaso_identificacion.png")
 
-    print("\n4. VALIDACION AVANZADA:")
-    print("   [OK] Validacion cruzada k-fold")
-    print("   [OK] Intervalos de confianza para parametros")
-    print("   [OK] Analisis de incertidumbre")
-
-    print("\n5. SENALES DE EXCITACION:")
-    print("   [OK] PRBS (Pseudo-Random Binary Sequence)")
-    print("   [OK] Chirp (frecuencia variable)")
-    print("   [OK] Multisine (opcional)")
-
-    print("\nIMAGEN GUARDADA: ident_imgs/tecnicas_avanzadas_posicion_inferior.png")
-
-    print("\nCONCLUSIONES:")
-    print("- PENDULO EN POSICION INFERIOR permite mejor identificacion (sistema ESTABLE)")
-    print("- Técnicas avanzadas permiten mejor caracterización del sistema")
-    print("- Validación cruzada proporciona evaluación más robusta")
-    print("- Identificación en frecuencia complementa métodos paramétricos")
-    print("- Métodos de subespacio útiles para sistemas MIMO complejos")
-    print("- Sistema estable permite excitacion mas suave y resultados mas precisos")
+    print("\nCONCLUSION:")
+    print("La identificacion FALLO completamente. RMSE bajo pero modelo ERRONEO.")
+    print("Validacion estadistica revelo problemas que RMSE oculto.")
 
     print("\n" + "="*80)

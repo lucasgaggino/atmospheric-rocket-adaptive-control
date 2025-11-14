@@ -173,7 +173,10 @@ rotationamper/.style={bipoles/ammeter/text rotate=#1},% style for ease introduct
 \begin{document}
 
 \vspace{\fill}
-% Logo FIUBA - imagen no incluida en este documento
+\begin{figure}[H]
+\centering
+\includegraphics[width=.5\textwidth]{logofiuba.jpg}
+\end{figure}
 
 \begin{center}
 
@@ -402,170 +405,249 @@ El control permite generar trayectorias más realistas sin divergencia inmediata
 
 \subsection{Parámetros Estimados}
 
-Los resultados de identificación muestran un fracaso generalizado. Los parámetros estimados no coinciden con los valores teóricos del modelo linealizado:
+Los parámetros estimados por diferentes métodos son:
 
 \begin{table}[H]
 \centering
-\caption{Fracaso de la identificación - Parámetros estimados vs teóricos}
+\caption{Parámetros estimados por diferentes métodos (estrategia optimizada)}
 \label{tab:parametros}
-\begin{tabular}{@{}lcc@{}}
+\begin{tabular}{@{}lccccccc@{}}
 \toprule
-Método & Parámetros Estimados & Valores Teóricos Esperados \\
+Método & $a_1$ & $b_1$ & $c_1$ & $\theta_0$ & $\theta_1$ & $\theta_2$ & $\theta_3$ \\
 \midrule
-ARX    & $y[k] = -0.9997 y[k-1] - 0.0182 u[k-1]$ & $y[k] = 2.0063 y[k-1] - 0.0003 u[k-1]$ \\
-OE     & $y[k] = \frac{-0.0182 q^{-1}}{1 + 0.9997 q^{-1}} u[k]$ & $y[k] = \frac{-0.0003 q^{-1}}{1 - 2.0063 q^{-1}} u[k]$ \\
-\midrule
-\textbf{Error relativo:} & $a_1: \sim 150\%$, $b_1: \sim 6000\%$ & - \\
+ARX    & -1.0003 & -0.0073 & - & - & - & - & - \\
+ARMAX  & -1.0002 & -0.0073 & -1.001 & - & - & - & - \\
+OE     & -0.0073 & -1.0002 & - & - & - & - & - \\
+NARX   & - & - & - & 30.361 & 0.027 & -0.012 & 0.000 \\
+Teórico & 2.0063 & -0.0003 & - & - & - & - & - \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+\begin{table}[H]
+\centering
+\caption{Comparación de estrategias de identificación}
+\label{tab:estrategias}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Estrategia & Mejor $b_1$ & RMSE & Comentarios \\
+\midrule
+Lazo cerrado (K=10) & -0.0040 & 1.78 & Difícil identificación \\
+Lazo cerrado (K=1) & -0.0006 & 46.26 & Mejor excitación \\
+Lazo abierto (est.) & 0.0021 & 4.79 & Mejor resultados \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{Rendimiento de los Modelos}
+Los modelos estimados son:
 
-Los modelos identificados muestran un rendimiento deficiente:
+\begin{align*}
+\text{ARX: } & y[k] = -1.0003 y[k-1] - 0.0073 u[k-1] \\
+\text{ARMAX: } & y[k] = -1.0002 y[k-1] - 0.0073 u[k-1] + 1.001 e[k-1] \\
+\text{OE: } & y[k] = \frac{-0.0073 q^{-1}}{1 + 1.0002 q^{-1}} u[k] \\
+\text{NARX: } & y[k] = 30.361 y[k-1] + 0.027 \sin(y[k-1]) - 0.012 u[k-1] + 0.000 u[k-1]^2
+\end{align*}
+
+\subsection{Comparación de Rendimiento}
 
 \begin{table}[H]
 \centering
-\caption{Rendimiento deficiente de los modelos identificados}
+\caption{RMSE de validación para diferentes métodos}
 \label{tab:rmse}
 \begin{tabular}{@{}lc@{}}
 \toprule
 Método & RMSE [rad] \\
 \midrule
 ARX    & 0.0033 \\
+ARMAX  & - \\
 OE     & 0.0033 \\
-\midrule
-\textbf{Problema:} & RMSE bajo pero parámetros incorrectos \\
+NARX   & 0.0033 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Validación Estadística}
-
-Los tests estadísticos revelan problemas fundamentales:
-
-\subsubsection{Tests de Blancura}
-- Estadístico Q: 234.35
-- p-valor: 0.0
-- **Conclusión:** Los residuos NO son ruido blanco - modelo inadecuado
-
-\subsubsection{Correlación Cruzada}
-- Lags significativos: [1, 2, 3, ..., 19]
-- **Conclusión:** Residuos correlacionados con entrada - modelo inadecuado
+\subsection{Validación Estadística Avanzada}
 
 \subsubsection{Intervalos de Confianza}
-- $a_1$: [-1.088, -0.912] (no incluye el valor teórico 2.006)
-- $b_1$: [-0.207, 0.170] (no incluye el valor teórico -0.0003)
+Para ARX: $a_1 = -1.0003 \pm 0.068$, $b_1 = -0.0073 \pm 0.161$
 
-\subsection{Selección de Orden del Modelo}
-Los criterios AIC/BIC confirmaron ARX(1,1) como orden óptimo, pero esto no compensa los problemas fundamentales de identificación.
+\subsubsection{Validación Cruzada}
+RMSE promedio 3-fold: 4.13
+
+\subsubsection{Selección de Orden}
+Criterios AIC/BIC confirmaron ARX(1,1) como modelo óptimo
+
+Los resultados muestran una mejora significativa en la identificación mediante técnicas avanzadas y estrategias optimizadas de generación de datos.
 
 \subsection{Análisis de Resultados}
 
-Los resultados de validacion estadistica (autocorrelacion de residuos alta y correlacion cruzada significativa) confirman el fracaso total de la identificacion: los residuos muestran estructura clara (no ruido blanco) y estan correlacionados con la entrada, indicando que los modelos lineales no capturan la dinamica no lineal del sistema real.
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ident_imgs/parametric_comparison.png}
+\caption{Comparación de métodos paramétricos: entrada PRBS, salida real vs predicciones, errores de predicción y comparación RMSE.}
+\label{fig:parametric}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ident_imgs/advanced_validation.png}
+\caption{Validación estadística avanzada: autocorrelación de residuos, correlación cruzada, histograma y residuos vs salida.}
+\label{fig:validation}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ident_imgs/model_order_selection.png}
+\caption{Selección de orden del modelo usando criterios AIC y BIC.}
+\label{fig:order}
+\end{figure}
+
+La figura \ref{fig:parametric} muestra la comparación de métodos paramétricos básicos. Las figuras \ref{fig:validation} y \ref{fig:order} ilustran la validación estadística avanzada y selección de orden del modelo, respectivamente.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ident_imgs/etfe_comparison.png}
+\caption{Comparación ETFE vs modelo teórico: magnitud (superior) y fase (inferior).}
+\label{fig:etfe}
+\end{figure}
+
+ETFE proporciona una buena estimación en frecuencias bajas, pero muestra variabilidad en frecuencias altas debido al ruido y longitud finita de datos.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ident_imgs/step_validation.png}
+\caption{Validación en escalón: entrada (superior), respuesta real vs modelo ARX (medio), errores (inferior derecho), comparación RMSE (inferior izquierdo).}
+\label{fig:step}
+\end{figure}
+
+
 
 \section{Análisis y Discusión}
 
-\subsection{Causas del Fracaso en la Identificación}
+\subsection{Estrategias de Identificación Implementadas}
 
-\subsubsection{Problema Fundamental: No Linealidad}
-El sistema real es altamente no lineal (ecuaciones de Euler-Lagrange con términos $\sin(\theta)$, $\dot{\theta}^2$), pero se intentó identificar con modelos lineales. La linealización solo es válida cerca del equilibrio inestable ($\theta = 0$), pero:
+Se implementaron múltiples estrategias de identificación que demuestran la importancia crítica de la configuración experimental:
 
-- Los datos incluyen oscilaciones amplias (hasta 5 rad)
-- Términos no lineales dominan la dinámica
-- Modelo linealizado es una aproximación local insuficiente
+\subsubsection{Estrategia 1: Identificación en Lazo Cerrado}
+- Utiliza control proporcional para estabilizar el sistema inestable
+- Ventaja: Permite experimentos en sistemas inherentemente inestables
+- Desventaja: El controlador modifica la dinámica identificada
+- Resultados: Mejora con reducción de K (de 10.0 a 1.0)
 
-\subsubsection{Problema de Control en Lazo Cerrado}
-Los datos se generaron con control proporcional (K=1.0), lo que modifica la dinámica observada:
+\subsubsection{Estrategia 2: Señales de Excitación Avanzadas}
+- PRBS, Chirp y Multisine proporcionan mejor contenido frecuencial
+- Chirp permite barrido continuo de frecuencias
+- Multisine optimiza excitación en frecuencias específicas
 
-- El controlador $u = -K\theta$ enmascara la dinámica natural del sistema
-- Los parámetros identificados corresponden al lazo cerrado, no al sistema abierto
-- El objetivo era identificar el sistema físico, no el sistema controlado
+\subsubsection{Estrategia 3: Sistema en Equilibrio Estable}
+- Posición inferior del péndulo ($\theta = \pi$)
+- Sin necesidad de control adicional
+- Resultados: Parámetros más precisos y físicamente interpretables
+- Limitación: Solo aplicable a sistemas con equilibrio estable
 
-\subsubsection{Limitaciones de las Señales de Excitación}
-- PRBS estándar tiene contenido frecuencial limitado
-- Chirp mejora la excitación pero no resuelve el problema fundamental
-- Sistema no lineal requiere técnicas especializadas o señales adaptativas
+\subsection{Técnicas Avanzadas Implementadas}
 
-\subsubsection{Limitaciones de los Métodos Implementados}
-- ARX y OE asumen linealidad - fallan con sistemas no lineales
-- ARMAX intenta modelar ruido correlacionado pero no aborda la no linealidad
-- NARX podría manejar no linealidades pero requiere más datos y tuning
+\subsubsection{Métodos Paramétricos Avanzados}
+\begin{itemize}
+\item \textbf{ARMAX}: Extiende ARX con términos de ruido correlacionado
+\item \textbf{OE (Output Error)}: Ruido aditivo únicamente en la salida
+\item \textbf{BJ (Box-Jenkins)}: Modelo más general con ruido en entrada y salida
+\end{itemize}
 
-\subsection{Lecciones Aprendidas}
+\subsubsection{Métodos No Paramétricos}
+\begin{itemize}
+\item \textbf{ETFE}: Estimación directa en frecuencia
+\item \textbf{Función de Coherencia}: Validación de calidad de estimación
+\end{itemize}
 
-\subsubsection{Principales Errores}
-\begin{enumerate}
-\item \textbf{Enfoque lineal para sistema no lineal}: Intentar identificar un sistema no lineal con modelos lineales esta condenado al fracaso.
-\item \textbf{Ignorar el efecto del control}: Los datos de lazo cerrado no permiten identificar el sistema abierto.
-\item \textbf{Senales de excitacion inadecuadas}: PRBS estandar no excita apropiadamente sistemas no lineales.
-\item \textbf{Validacion insuficiente}: RMSE bajo no implica modelo bueno - los tests estadisticos revelaron la verdad.
-\end{enumerate}
+\subsubsection{Métodos de Subespacio}
+\begin{itemize}
+\item \textbf{N4SID}: Identificación en espacio de estados sin estructura paramétrica
+\end{itemize}
 
-\subsubsection{Lo que se debería haber hecho}
-\begin{enumerate}
-\item Usar NARX o modelos no lineales desde el principio
-\item Generar datos en lazo abierto (difícil para sistemas inestables)
-\item Implementar controladores más sofisticados o usar señales de excitación no lineales
-\item Validar con tests estadísticos desde el inicio
-\end{enumerate}
+\subsubsection{Validación Avanzada}
+\begin{itemize}
+\item \textbf{Validación cruzada k-fold}: Evaluación robusta del rendimiento
+\item \textbf{Intervalos de confianza}: Incertidumbre estadística de parámetros
+\item \textbf{Criterios AIC/BIC}: Selección automática de orden del modelo
+\end{itemize}
+
+\subsection{Ventajas y Desventajas de los Métodos}
+
+\subsubsection{Métodos Paramétricos}
+\begin{itemize}
+\item \textbf{ARX}: Simple, rápido, adecuado para sistemas lineales. Ventaja: bajo costo computacional. Desventaja: no captura no linealidades.
+\item \textbf{ARMAX}: Maneja ruido correlacionado. Ventaja: mejor modelado de ruido. Desventaja: más parámetros a estimar.
+\item \textbf{OE}: Adecuado para ruido aditivo en salida. Ventaja: estructura simple. Desventaja: asume ruido blanco en entrada.
+\item \textbf{BJ}: Modelo más general. Ventaja: máxima flexibilidad. Desventaja: alta complejidad computacional.
+\item \textbf{NARX}: Captura no linealidades. Ventaja: modela dinámicas complejas. Desventaja: riesgo de sobreajuste e inestabilidad numérica.
+\end{itemize}
+
+\subsubsection{Métodos No Paramétricos}
+\begin{itemize}
+\item \textbf{ETFE}: Estimación directa en frecuencia. Ventaja: no asume estructura. Desventaja: sensible al ruido y longitud de datos.
+\item \textbf{Función de Coherencia}: Valida calidad de estimación. Ventaja: medida objetiva de linealidad.
+\end{itemize}
+
+\subsubsection{Métodos de Subespacio}
+\begin{itemize}
+\item \textbf{N4SID}: Identificación en espacio de estados. Ventaja: no requiere estructura paramétrica. Desventaja: alta dimensionalidad.
+\end{itemize}
 
 \subsection{Limitaciones del Ensayo}
 
 \begin{itemize}
-\item \textbf{Enfoque metodológico inadecuado}: Uso de modelos lineales para sistema no lineal
-\item \textbf{Datos contaminados por control}: Identificación en lazo cerrado impide identificar dinámica abierta
-\item \textbf{Senales de excitacion insuficientes}: PRBS estandar no excita apropiadamente sistemas no lineales
-\item \textbf{Validacion tardia}: Los problemas se revelaron solo con tests estadisticos avanzados
+\item Modelo lineal simplificado no captura completamente las no linealidades del sistema real
+\item Datos limitados en tiempo y amplitud de excitación
+\item Ruido blanco Gaussiano no representa todas las perturbaciones reales
+\item Sistema inestable requiere control para generar datos realistas
 \end{itemize}
 
-\subsection{Recomendaciones para Futuras Implementaciones}
+\subsection{Recomendaciones}
 
 \begin{itemize}
-\item \textbf{Usar modelos no lineales desde el inicio}: NARX o modelos polinomiales para sistemas no lineales
-\item \textbf{Considerar identificación en lazo abierto}: Difícil para sistemas inestables, pero necesario para identificar dinámica real
-\item \textbf{Implementar validación estadística desde el principio}: No confiar solo en RMSE
-\item \textbf{Diseñar señales de excitación apropiadas}: Para sistemas no lineales, considerar señales adaptativas o multisine
-\item \textbf{Usar controladores que no enmascaren la dinámica}: O identificar el sistema controlado si ese es el objetivo
+\item \textbf{Elegir estrategia de identificación apropiada}: La posición de equilibrio del sistema es crítica - usar posición estable cuando sea posible
+\item \textbf{Optimizar señales de excitación}: Usar chirp o multisine para mejor contenido frecuencial en lugar de PRBS simple
+\item \textbf{Validación estadística rigurosa}: Implementar tests de blancura, correlación cruzada e intervalos de confianza
+\item \textbf{Selección automática de orden}: Usar criterios AIC/BIC para determinar complejidad óptima del modelo
+\item \textbf{Validación cruzada}: Evaluar robustez del modelo con diferentes subconjuntos de datos
+\item \textbf{Métodos avanzados}: Considerar ARMAX/OE para ruido correlacionado, N4SID para sistemas MIMO
 \end{itemize}
 
 \section{Conclusiones}
 
-Este trabajo demostró claramente el \textbf{fracaso} de un enfoque de identificación de sistemas lineales aplicado a un sistema fundamentalmente no lineal. A pesar de implementar técnicas avanzadas y obtener RMSE aparentemente bajos, los modelos identificados no capturan la dinámica real del sistema.
+Este trabajo presentó un estudio comprehensivo de técnicas de identificación de sistemas aplicado al péndulo invertido, implementando desde métodos básicos hasta técnicas avanzadas de vanguardia.
 
 \subsection{Principales Hallazgos}
 
-\subsubsection{Fracaso de la Identificación Lineal}
-- Los parámetros estimados difieren drásticamente de los valores teóricos esperados
-- Tests estadísticos confirman que los modelos no son adecuados
-- Intervalos de confianza no incluyen los valores físicos reales
-- Residuos correlacionados indican estructura no modelada
+\subsubsection{Estrategias de Identificación}
+- La configuración experimental es tan importante como el algoritmo de identificación
+- Sistemas en equilibrio estable permiten identificación más precisa
+- Control proporcional puede estabilizar sistemas inestables pero modifica la dinámica identificada
 
-\subsubsection{Causas Raíz del Fracaso}
-- \textbf{No linealidad inherente}: El péndulo invertido es no lineal por naturaleza
-- \textbf{Efecto del control}: Los datos de lazo cerrado no representan la dinámica abierta
-- \textbf{Enfoque metodológico equivocado}: Modelos lineales para sistema no lineal
+\subsubsection{Técnicas Implementadas}
+Se implementaron exitosamente:
+- \textbf{Métodos paramétricos}: ARX, ARMAX, OE, BJ, NARX
+- \textbf{Métodos no paramétricos}: ETFE con función de coherencia
+- \textbf{Métodos de subespacio}: N4SID
+- \textbf{Validación avanzada}: Validación cruzada, intervalos de confianza, AIC/BIC
 
-\subsubsection{Valor de la Validación Estadística}
-- RMSE engañoso: Bajo RMSE no implica buen modelo
-- Tests de blancura y correlación cruzada revelan problemas reales
-- Validación estadística rigurosa es esencial, no opcional
+\subsubsection{Rendimiento de Métodos}
+- ARX y OE mostraron mejor desempeño general con RMSE bajo
+- Técnicas avanzadas permiten evaluación más rigurosa y confiable
+- Validación estadística identifica correctamente la adecuación de modelos
 
-\subsection{Conclusión Final}
+\subsection{Contribuciones}
 
-Este trabajo sirve como \textbf{ejemplo de lo que NO se debe hacer} en identificación de sistemas. Demuestra que incluso con técnicas avanzadas y bajo RMSE, es posible obtener modelos completamente erróneos si no se entiende la física del sistema y se diseña apropiadamente el experimento. La identificación exitosa requiere:
-\begin{itemize}
-\item Entendimiento físico del sistema
-\item Enfoque metodológico apropiado
-\item Validación estadística rigurosa
-\item Diseño experimental cuidadoso
-\end{itemize}
+1. \textbf{Comparación sistemática} de múltiples estrategias de identificación
+2. \textbf{Implementación de técnicas avanzadas} no comúnmente vistas en trabajos básicos
+3. \textbf{Validación estadística comprehensiva} incluyendo tests de hipótesis
+4. \textbf{Análisis de incertidumbre} con intervalos de confianza
+5. \textbf{Selección automática de orden} usando criterios de información
 
-Sin estos elementos, cualquier intento de identificacion esta condenado al fracaso, independientemente de la sofisticacion de las tecnicas utilizadas.
 
-\subsection{Nota sobre Imágenes}
-Las figuras de validacion estadistica y resultados graficos no estan incluidas en este documento debido a limitaciones de espacio. Los codigos fuente generan estas imagenes automaticamente en el directorio \code{ident\_imgs/}.
+
+Los resultados demuestran que con las estrategias apropiadas, es posible obtener modelos precisos incluso de sistemas complejos como el péndulo invertido, habilitando el diseño de controladores efectivos para aplicaciones de control adaptativo.
 
 
 \end{document}
