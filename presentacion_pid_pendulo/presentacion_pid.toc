@@ -1,0 +1,4 @@
+\beamer@sectionintoc {1}{El Sistema y el Controlador}{2}{0}{1}
+\beamer@sectionintoc {2}{Diseño del Controlador PID}{4}{0}{2}
+\beamer@sectionintoc {3}{Resultados Experimentales}{8}{0}{3}
+\beamer@sectionintoc {4}{Sintonización Automática (Autotuning)}{13}{0}{4}
