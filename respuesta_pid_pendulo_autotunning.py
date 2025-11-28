@@ -4,6 +4,7 @@ import control as ctrl
 import os
 import math
 from scipy.integrate import solve_ivp
+import pandas as pd
 
 # ============================================
 # RESPUESTA DEL SISTEMA PID PARA PÉNDULO INVERTIDO
@@ -395,26 +396,26 @@ def simulate_closed_loop_with_initial_condition(pid, t_total, ref_func, initial_
         
         # --- AUTOTUNING TRIGGER ---
         if not autotuning_done and k >= autotune_k:
-            print(f"\n[t={t_sim[k]:.2f}s] Ejecutando AUTOTUNING...")
+            #print(f"\n[t={t_sim[k]:.2f}s] Ejecutando AUTOTUNING...")
             
             # Extraer parámetros identificados
             a1_est, a2_est, b1_est, b2_est = theta_hist[-1,0], theta_hist[-1,1], -theta_hist[-1,2], -theta_hist[-1,3]
             theta_hat = [a1_est, a2_est, b1_est, b2_est]
             if k == autotune_k:
                 theta_est_history[1:len(theta_hist)+1,:] = theta_hist.copy()
-            print(f"Parámetros estimados: a1={a1_est:.4f}, a2={a2_est:.4f}, b1={b1_est:.4f}, b2={b2_est:.4f}")
+            #print(f"Parámetros estimados: a1={a1_est:.4f}, a2={a2_est:.4f}, b1={b1_est:.4f}, b2={b2_est:.4f}")
             
             # Convertir a continuo
             try:
                 num_c_est, den_c_est = conversion_tustin_manual(a1_est, a2_est, b1_est, b2_est, Ts)
                 Gs_ident = ctrl.TransferFunction(num_c_est, den_c_est)
-                print(f"Planta identificada G(s): {Gs_ident}")
+                #print(f"Planta identificada G(s): {Gs_ident}")
                 
                 # Calcular nuevos PID
                 new_Kp, new_Ki, new_Kd = pole_placement(Gs_ident, [-3, -3, -10])
                 
                 if new_Kp is not None:
-                    print(f"Nuevas ganancias PID: Kp={new_Kp:.4f}, Ki={new_Ki:.4f}, Kd={new_Kd:.4f}")
+                    #print(f"Nuevas ganancias PID: Kp={new_Kp:.4f}, Ki={new_Ki:.4f}, Kd={new_Kd:.4f}")
                     # Actualizar controlador
                     pid.Kp = new_Kp
                     pid.Ki = new_Ki
@@ -512,12 +513,37 @@ def main():
     
 
 
+    # Guardar datos de simulación
+    save_dir = "saved_runs_pid_autotunning"
+    os.makedirs(save_dir, exist_ok=True)
+
+    def save_run_data(filename, t, y, u, ref, theta_hist, pid_hist):
+        # theta_hist: [a1, a2, b1, b2]
+        # pid_hist: [Kp, Ki, Kd]
+        df = pd.DataFrame({
+            't': t,
+            'y': y,
+            'u': u,
+            'ref': ref,
+            'a1_est': theta_hist[:, 0],
+            'a2_est': theta_hist[:, 1],
+            'b1_est': theta_hist[:, 2],
+            'b2_est': theta_hist[:, 3],
+            'Kp': pid_hist[:, 0],
+            'Ki': pid_hist[:, 1],
+            'Kd': pid_hist[:, 2]
+        })
+        path = os.path.join(save_dir, filename)
+        df.to_csv(path, index=False)
+        print(f"Datos guardados en {path}")
+
     # 1. Sin perturbaciones
     pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
     t1, y1, u1, ref1, th1, pid_h1 = simulate_closed_loop_with_initial_condition(
         pid, t_total=T_SIM, ref_func=lambda t: 0.0, initial_theta=INITIAL_THETA
     )
     plot_sim_results(t1, y1, u1, ref1, th1, pid_h1, "Sin Perturbaciones", 1)
+    save_run_data('sin_perturbaciones.csv', t1, y1, u1, ref1, th1, pid_h1)
 
     # 2. Perturbación Sinusoidal
     pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
@@ -526,7 +552,8 @@ def main():
         disturbance_func=lambda t: 0.005 * np.sin(2 * np.pi * 0.5 * t)
     )
     plot_sim_results(t2, y2, u2, ref2, th2, pid_h2, "Pert. Sinusoidal", 5)
-
+    save_run_data('pert_sinusoidal.csv', t2, y2, u2, ref2, th2, pid_h2)
+    
     # 3. Perturbación Escalón
     pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
     t3, y3, u3, ref3, th3, pid_h3 = simulate_closed_loop_with_initial_condition(
@@ -534,6 +561,7 @@ def main():
         disturbance_func=lambda t: 0.01 if t > 6.0 and t < 8.0 else 0.0
     )
     plot_sim_results(t3, y3, u3, ref3, th3, pid_h3, "Pert. Escalón", 9)
+    save_run_data('pert_escalon.csv', t3, y3, u3, ref3, th3, pid_h3)
 
     # 4. Ruido de Medición
     pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
@@ -542,6 +570,7 @@ def main():
         measurement_noise=0.005
     )
     plot_sim_results(t4, y4, u4, ref4, th4, pid_h4, "Ruido Medición", 13)
+    save_run_data('ruido_medicion.csv', t4, y4, u4, ref4, th4, pid_h4)
 
     
 

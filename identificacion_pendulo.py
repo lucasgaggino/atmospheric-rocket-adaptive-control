@@ -298,7 +298,7 @@ if __name__ == "__main__":
         print(f"MSE validación escalón: {mse_step:.2e}")
         print(f"RMSE validación PRBS: {np.sqrt(mse_prbs):.2e}")
         print(f"RMSE validación escalón: {np.sqrt(mse_step):.2e}")
-    else:
+            else:
         print("No se pudo obtener una estimación válida para validación")
 
     # Gráfico adicional: Respuesta forzada del sistema continuo y discreto
