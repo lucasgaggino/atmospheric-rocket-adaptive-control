@@ -1,578 +1,448 @@
 import numpy as np
 from matplotlib import pyplot as plt
-import control as ctrl
 import os
 import math
 from scipy.integrate import solve_ivp
 import pandas as pd
 
-# ============================================
-# RESPUESTA DEL SISTEMA PID PARA PÉNDULO INVERTIDO
-# Referencia: theta = 0, Condición inicial: theta = 0.1
-# ============================================
-output_dir = "presentacion_pid_pendulo/imagenes_pid_autotunning"
+# ==============================================================================
+# STR (SELF-TUNING REGULATOR) ADAPTATIVO INDIRECTO - 100% TIEMPO DISCRETO
+# Péndulo invertido en posición vertical (inestable)
+#
+# Metodología (según ICA_STR.pdf):
+#   1. RLS estima A(q), B(q) del modelo ARX en línea.
+#   2. Se resuelve la ec. Diofantina (identidad de Bézout) A·R + B·S = A_lc
+#      vía matriz de Sylvester, incluyendo un integrador en R (rechazo de
+#      perturbación escalón) y SIN cancelar ceros (el cero está cerca de z=-1).
+#   3. Se aplica la ley de control RST discreta: R(q)u = T(q)r - S(q)y.
+#
+# En NINGÚN punto del diseño del regulador se pasa a tiempo continuo.
+# ==============================================================================
 
+output_dir = "presentacion_pid_pendulo/imagenes_pid_autotunning"
+save_dir = "saved_runs_pid_autotunning"
+
+# ------------------------------------------------------------------
 # Parámetros del péndulo (posición vertical - inestable)
-M = 1.0  # masa del carro [kg]
-m = 0.1  # masa del péndulo [kg]
-l = 0.5  # semilongitud de la barra [m]
+# ------------------------------------------------------------------
+M = 1.0   # masa del carro [kg]
+m = 0.1   # masa del péndulo [kg]
+l = 0.5   # semilongitud de la barra [m]
 g = 9.81  # gravedad [m/s^2]
+Ts = 0.02  # tiempo de muestreo [s]
 
 # Constantes del modelo linealizado - POSICIÓN VERTICAL (inestable)
+#   theta_ddot = A_theta * theta + B_theta * F
+# A_theta > 0 (equilibrio inestable). B_theta < 0: un F > 0 (empuje del carro)
+# reduce theta, por lo que la ganancia de la planta es negativa (coincide con
+# el signo usado en pendulo.py y con la ODE no lineal cartpole_ode).
 A_theta = 3.0 * g * (M + m) / (l * (4.0 * M + m))  # >0 (inestable)
-B_theta = 3.0 / (l * (4.0 * M + m))
+B_theta = -3.0 / (l * (4.0 * M + m))               # <0 (signo real de la planta)
 
-# Función de transferencia continua
-num_c = [B_theta]
-den_c = [1.0, 0.0, -A_theta]
-G_s = ctrl.TransferFunction(num_c, den_c)
+# Modelo discreto nominal (ARX) obtenido por discretización ZOH ANALÍTICA de
+# G(s) = B_theta / (s^2 - A_theta). Se usa SOLO como prior/arranque del STR;
+# el diseño del regulador es enteramente discreto (no se usan librerías de
+# tiempo continuo ni transformaciones s <-> z).
+#
+# Para G(s) = B_theta/(s^2 - w^2) con w = sqrt(A_theta), la ZOH da:
+#   A(z) = z^2 - 2 cosh(w Ts) z + 1
+#   B(z) = [B_theta (cosh(w Ts) - 1)/A_theta] (z + 1)
+# es decir A(q) = 1 + a1 q^-1 + a2 q^-2, B(q) = b1 q^-1 + b2 q^-2 con b1 = b2.
 
-# Discretización ZOH
-Ts = 0.02  # tiempo de muestreo [s]
-G_z = ctrl.c2d(G_s, Ts, method="zoh")
-
-num_d = np.squeeze(G_z.num)
-den_d = np.squeeze(G_z.den)
-
-# Modelo en espacio de estados para simulación (lineal)
-G_z_ss = ctrl.tf2ss(G_z)
+def _modelo_arx_nominal():
+    w = math.sqrt(A_theta)
+    ch = math.cosh(w * Ts)
+    a1 = -2.0 * ch
+    a2 = 1.0
+    b = B_theta * (ch - 1.0) / A_theta
+    return np.array([a1, a2, b, b])
 
 
-# ============================================
-# MODELO NO LINEAL DEL PÉNDULO
-# ============================================
+THETA_NOMINAL = _modelo_arx_nominal()
+
+# Polos deseados de lazo cerrado, especificados directamente en DISCRETO.
+# Se mapean los polos continuos del diseño previo (-3, -3, -10) vía z = e^{s*Ts}
+# y se agregan 2 polos auxiliares rápidos para completar el grado 5 requerido.
+_POLOS_CONT = np.array([-3.0, -3.0, -10.0])
+POLOS_LC = np.concatenate((np.exp(_POLOS_CONT * Ts), [0.2, 0.2]))
+
+
+# ==============================================================================
+# MODELO NO LINEAL DEL PÉNDULO (planta "real" a controlar)
+# ==============================================================================
 
 def cartpole_ode(t, y, F_control):
-    """
-    Ecuaciones diferenciales no lineales del péndulo-cartpole
-    Estado: y = [x, xdot, theta, thetadot]
-    Solo nos interesa theta, pero necesitamos el modelo completo
-    """
+    """EDOs no lineales del cartpole. Estado: y = [x, xdot, theta, thetadot]."""
     x, xdot, th, thdot = y
     s, c = math.sin(th), math.cos(th)
-
-    # Fuerza externa (acción de control)
-    F_ext = F_control  # F_control se mantiene constante durante el intervalo de integración
-
-
-    # Auxiliar
-    temp = (F_ext + m * l * thdot * thdot * s) / (M + m)
-
-    # Denominador con inercia de barra uniforme (I = (1/3) m l^2)
+    temp = (F_control + m * l * thdot * thdot * s) / (M + m)
     denom = l * (4.0 / 3.0 - (m * c * c) / (M + m))
-
-    # Aceleraciones
     thddot = (g * s - c * temp) / denom
     xddot = temp - (m * l * thddot * c) / (M + m)
-
     return [xdot, xddot, thdot, thddot]
 
-print("=== SISTEMA: PÉNDULO INVERTIDO EN POSICIÓN VERTICAL ===")
-print(f"G(s) = {B_theta:.4f} / (s^2 - {A_theta:.4f})")
-print(f"G(z) = {num_d[0]:.8f}z + {num_d[1]:.8f} / (z^2 {den_d[1]:+.4f}z {den_d[2]:+.4f}) (Ts = {Ts}s)")
-print(f"Polos continuos: {ctrl.poles(G_s)}")
-print(f"Polos discretos: {ctrl.poles(G_z)}")
 
-# ============================================
-# CONTROLADOR PID - VALORES DEL IFT
-# ============================================
+# ==============================================================================
+# 1. ECUACIÓN DIOFANTINA DISCRETA (MATRIZ DE SYLVESTER)
+# ==============================================================================
 
-class PIDController:
-    def __init__(self, Kp=80.5255, Ki=5.0000, Kd=10.0000, Ts=Ts):
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-        self.Ts = Ts
-        self.integral = 0.0
-        self.prev_error = 0.0
-        self.prev_derivative = 0.0
+def solve_diophantine_sylvester(A_bar, B, Alc, deg_R, deg_S):
+    """Resuelve la identidad de Bézout discreta:
 
-    def reset(self):
-        self.integral = 0.0
-        self.prev_error = 0.0
-        self.prev_derivative = 0.0
+        A_bar(q^-1) * R_bar(q^-1) + B(q^-1) * S(q^-1) = Alc(q^-1)
 
-    def control(self, error, derivative_filter=0.0):
-        # Término proporcional
-        P = self.Kp * error
+    con R_bar mónico (R_bar[0] = 1). Los polinomios se representan como arreglos
+    de coeficientes en potencias crecientes de q^-1 (índice 0 = término q^0).
 
-        # Término integral
-        self.integral += error * self.Ts
-        I = self.Ki * self.integral
+    Incógnitas: R_bar = [1, r1, ..., r_{deg_R}], S = [s0, ..., s_{deg_S}].
+    Se arma la matriz de Sylvester (Toeplitz concatenadas) y se resuelve el
+    sistema lineal resultante.
+    """
+    A_bar = np.asarray(A_bar, dtype=float)
+    B = np.asarray(B, dtype=float)
+    Alc = np.asarray(Alc, dtype=float)
 
-        # Término derivativo con filtro
-        derivative = (error - self.prev_error) / self.Ts
-        if derivative_filter > 0:
-            alpha = derivative_filter / (derivative_filter + self.Ts)
-            derivative = alpha * self.prev_derivative + (1 - alpha) * derivative
+    n_rows = len(Alc)                 # coeficientes de potencia 0 .. deg(Alc)
+    n_unk = deg_R + (deg_S + 1)       # r1..r_degR  y  s0..s_degS
 
-        D = self.Kd * derivative
+    M_syl = np.zeros((n_rows, n_unk))
 
-        # Control total
-        u = P + I + D
+    # Columnas asociadas a r_i (i = 1..deg_R): aporta A_bar desplazado i lugares
+    for i in range(1, deg_R + 1):
+        for k in range(len(A_bar)):
+            M_syl[i + k, i - 1] += A_bar[k]
 
-        # Saturación
-        #u = np.clip(u, -500.0, 500.0)
+    # Columnas asociadas a s_j (j = 0..deg_S): aporta B desplazado j lugares
+    off = deg_R
+    for j in range(0, deg_S + 1):
+        for k in range(len(B)):
+            M_syl[j + k, off + j] += B[k]
 
-        # Actualizar estados
-        self.prev_error = error
-        self.prev_derivative = derivative
+    # Lado derecho: Alc menos el aporte del término mónico de R_bar (coef 1)
+    rhs = Alc.copy()
+    for k in range(len(A_bar)):
+        rhs[k] -= A_bar[k]
 
+    # La ecuación de potencia 0 es identidad (A_bar[0]*1 = Alc[0] = 1); se omite.
+    M_solve = M_syl[1:1 + n_unk, :]
+    rhs_solve = rhs[1:1 + n_unk]
+
+    sol = np.linalg.solve(M_solve, rhs_solve)
+
+    R_bar = np.concatenate(([1.0], sol[:deg_R]))
+    S = sol[deg_R:]
+    return R_bar, S
+
+
+def design_rst(theta_hat, polos_lc=POLOS_LC):
+    """Diseño del regulador RST discreto por colocación de polos, con integrador
+    y sin cancelación de ceros.
+
+    theta_hat = [a1, a2, b1, b2] (parámetros ARX estimados).
+    Devuelve (R, S, t0) con:
+        R = (1 - q^-1) * R_bar   (grado 3, incorpora el integrador)
+        S = s0 + s1 q^-1 + s2 q^-2
+        T = t0                   (ganancia estática unitaria)
+    """
+    a1, a2, b1, b2 = theta_hat
+    A = np.array([1.0, a1, a2])       # A(q^-1)
+    B = np.array([0.0, b1, b2])       # B(q^-1) = b1 q^-1 + b2 q^-2
+
+    # Integrador: se diseña sobre A_bar = A * (1 - q^-1)  (grado 3)
+    A_bar = np.convolve(A, [1.0, -1.0])
+
+    # Polinomio característico deseado A_lc(q^-1) (grado 5)
+    Alc = np.real(np.poly(polos_lc))  # [1, alc1, ..., alc5]
+
+    # Controlador de mínimo orden: deg(S) = deg(A_bar) - 1 = 2, deg(R_bar) = 2
+    R_bar, S = solve_diophantine_sylvester(A_bar, B, Alc, deg_R=2, deg_S=2)
+
+    # R final incorpora el integrador
+    R = np.convolve([1.0, -1.0], R_bar)  # grado 3
+
+    # Feedforward para ganancia estática unitaria: y/r|_{q^-1=1} = B(1)T/Alc(1) = 1
+    B1 = b1 + b2
+    t0 = np.sum(Alc) / B1 if abs(B1) > 1e-12 else 0.0
+
+    return R, S, t0
+
+
+# ==============================================================================
+# 2. CONTROLADOR RST Y ESTIMADOR RLS
+# ==============================================================================
+
+class RSTController:
+    """Ley de control lineal general (RST) en tiempo discreto:
+
+        R(q) u_k = T(q) r_k - S(q) y_k
+
+    implementada de forma recursiva:
+
+        u_k = (t0 r_k - S·[y_k, y_{k-1}, ...] - R[1:]·[u_{k-1}, u_{k-2}, ...]) / R[0]
+    """
+
+    def __init__(self, R, S, t0):
+        self.set_params(R, S, t0)
+        self.u_hist = np.zeros(max(len(R) - 1, 1))  # [u_{k-1}, u_{k-2}, ...]
+        self.y_hist = np.zeros(max(len(S) - 1, 1))  # [y_{k-1}, y_{k-2}, ...]
+
+    def set_params(self, R, S, t0):
+        self.R = np.asarray(R, dtype=float)
+        self.S = np.asarray(S, dtype=float)
+        self.t0 = float(t0)
+
+    def control(self, r, y):
+        ny = len(self.S)
+        nu = len(self.R)
+
+        yvec = np.concatenate(([y], self.y_hist))[:ny]
+        s_term = float(self.S @ yvec)
+        r_term = float(self.R[1:] @ self.u_hist[:nu - 1]) if nu > 1 else 0.0
+
+        u = (self.t0 * r - s_term - r_term) / self.R[0]
+
+        # Actualizar historiales
+        if len(self.y_hist) > 0:
+            self.y_hist = np.concatenate(([y], self.y_hist[:-1]))
+        if len(self.u_hist) > 0:
+            self.u_hist = np.concatenate(([u], self.u_hist[:-1]))
         return u
 
-def estimador_RLS_step(phi, y_k, theta_hat, P, lambda_=0.99):
-    """
-    Realiza un paso de estimación RLS.
-    """
-    # Predicción a priori
-    y_hat = phi @ theta_hat
-    err = y_k - y_hat
-    
-    # Ganancia de corrección
-    den = lambda_ + phi.T @ P @ phi
-    K = (P @ phi) / den
-    
-    # Actualización de parámetros
-    theta_hat_new = theta_hat + K * err
-    
-    # Actualización de matriz de covarianza
-    P_new = (P - np.outer(K, phi) @ P) / lambda_
-    
-    return theta_hat_new, P_new, err
 
-def estimador_RLS_lazo_cerrado(u, y, na=2, nb=2, nc=0, lambda_=0.90, theta_ini=None, plot=False):
-    """
-    Estimador RLS para modelo ARMAX en lazo cerrado
-    """
-    N = len(u)
-    n_theta = na + nb + nc
+def rls_step(theta, P, phi, y_meas, lambda_=0.995):
+    """Un paso de mínimos cuadrados recursivos (RLS) con factor de olvido."""
+    y_pred = phi @ theta
+    err = y_meas - y_pred
+    Pphi = P @ phi
+    denom = lambda_ + phi @ Pphi
+    K = Pphi / denom
+    theta = theta + K * err
+    P = (P - np.outer(K, Pphi)) / lambda_
+    return theta, P, err
 
-    if theta_ini is None:
-        theta_hat = np.zeros(n_theta)
-    else:
-        theta_hat = theta_ini
 
-    P = 100 * np.eye(n_theta)
-    err = np.zeros_like(y)
-    y_hat = np.zeros_like(y)
+# ==============================================================================
+# 3. SIMULACIÓN EN LAZO CERRADO CON STR ADAPTATIVO
+# ==============================================================================
 
-    theta_hist = []
-    k_range = range(max(na, nb, nc)+1, N)
+def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
+                             disturbance_func=None, measurement_noise=0.0,
+                             warmup_k=100, redesign_every=25, lambda_=0.995,
+                             excite_thresh=1e-4):
+    """Simula el péndulo no lineal en lazo cerrado con un STR adaptativo indirecto.
 
-    for k in k_range:
-        # Vector de regresores para ARMAX: [-y[k-1], -y[k-2], u[k-1], u[k-2]]
-        phi = np.concatenate((-y[k-1:k-na-1:-1], u[k-1:k-nb-1:-1]))
-        y_hat[k] = phi @ theta_hat
-        err[k] = y[k] - y_hat[k]
-
-        if np.any(np.abs(phi) > 1e10) or np.any(np.abs(theta_hat) > 1e10):
-            print(f"Overflow detectado en k={k}, deteniendo estimacion")
-            break
-
-        K = P @ phi / (lambda_ + phi.T @ P @ phi)
-        theta_hat = theta_hat + K * err[k]
-        P = (P - np.outer(K, phi) @ P) / lambda_
-
-        theta_hist.append(theta_hat.copy())
-
-    theta_hist = np.array(theta_hist)
-
-    if len(theta_hist) == 0:
-        return np.array([]), P, err, np.array([])
-
-    # Validación
-    N_lag = 50
-    ree = np.correlate(err, err, 'full')
-    rey = np.correlate(err, y_hat, 'full')
-    ryy = np.correlate(y_hat, y_hat, 'full')
-    RN = ree/(rey*ryy+0.001)**0.5
-    lags = np.arange(-len(err)+1, len(err))
-    center = len(ree) // 2
-    ree = ree[center-N_lag:center+N_lag+1]
-    RN = RN[center-N_lag:center+N_lag+1]
-    lags_plot = lags[center-N_lag:center+N_lag+1]
-    ree_max_val = 2.17/np.sqrt(N)*ree[N_lag]
-
-    if plot and len(theta_hist) > 1:
-        k_range_plot = list(k_range)[:len(theta_hist)]
-
-        plt.figure(figsize=(12, 8))
-
-        plt.subplot(221)
-        plt.step(k_range_plot, err[k_range_plot], where='post')
-        plt.ylabel('Error de prediccion')
-        plt.title('Error de prediccion ARMAX Lazo Cerrado')
-
-        plt.subplot(222)
-        param_names = ['$a_1$', '$a_2$',  '$b_1$', '$b_2$', '$c_1$']
-        colors = ['blue', 'red', 'green', 'orange', 'purple']
-        for i in range(min(n_theta, len(param_names))):
-            plt.step(k_range_plot, theta_hist[:, i], color=colors[i], label=param_names[i], where='post')
-        plt.legend()
-        plt.xlabel('k')
-        plt.ylabel('theta')
-        plt.title('Evolucion de parametros ARMAX Lazo Cerrado')
-
-        plt.subplot(223)
-        plt.plot(lags_plot, ree)
-        plt.ylabel('r_ee')
-        plt.axhline(ree_max_val, linestyle='--', color='r', label=f"r_ee,max")
-        plt.title('Autocorrelacion del error')
-        plt.xlabel('lag')
-        plt.legend()
-
-        plt.subplot(224)
-        plt.plot(y, 'b-', label='y (real)', linewidth=2)
-        plt.plot(y_hat, 'r--', label='y_hat (estimado)', linewidth=2)
-        plt.xlabel('k')
-        plt.ylabel('y')
-        plt.title('Comparacion real vs ARMAX Lazo Cerrado')
-        plt.legend()
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, 'armax_closed_loop_identification.png'), dpi=300, bbox_inches='tight')
-        plt.show()
-
-    return theta_hist, P, err, ree
-
-def conversion_tustin_manual(a1, a2, b1, b2, Ts):
-    """
-    Realiza la conversión Discreto -> Continuo usando la aproximación bilineal (Tustin)
-    manualmente, sin depender de librerías de control.
-    
-    H(z) = (b1*z + b2) / (z^2 + a1*z + a2)
-    Sustitución: z = (1 + s*alpha) / (1 - s*alpha), con alpha = Ts/2
-    
-    Retorna coeficientes de G(s) = (num2*s^2 + num1*s + num0) / (den2*s^2 + den1*s + den0)
-    """
-    alpha = Ts / 2.0
-    alpha_sq = alpha**2
-    
-    num_s2 = -b1 * alpha_sq + b2 * alpha_sq
-    num_s1 = -2 * b2 * alpha
-    num_s0 = b1 + b2
-    
-    # Denominador G(s)
-    # Proviene de: (1+as)^2 + a1(1+as)(1-as) + a2(1-as)^2
-    #            = (1 + 2as + a^2s^2) + a1(1 - a^2s^2) + a2(1 - 2as + a^2s^2)
-    den_s2 = alpha_sq + a2 * alpha_sq - a1 * alpha_sq # OJO: a1(1 - a^2s^2) -> -a1*alpha_sq
-    # Re-chequeo algebraico: 
-    # Termino s^2: 1*alpha^2 - a1*alpha^2 + a2*alpha^2 = alpha^2 * (1 - a1 + a2)
-    den_s2 = alpha_sq * (1 - a1 + a2)
-    
-    # Termino s^1: 2*alpha - 2*a2*alpha = 2*alpha * (1 - a2)
-    den_s1 = 2 * alpha * (1 - a2)
-    
-    # Termino s^0: 1 + a1 + a2
-    den_s0 = 1 + a1 + a2
-    
-    # Normalizar para que el coeficiente de mayor orden del denominador sea 1 (si no es 0)
-    if abs(den_s2) > 1e-10:
-        k = den_s2
-    elif abs(den_s1) > 1e-10:
-        k = den_s1
-    else:
-        k = 1.0
-    
-    num_c , den_c = [num_s2/k, num_s1/k, num_s0/k], [den_s2/k, den_s1/k, den_s0/k]
-    den_c[1] = 0.0
-    num_c = [num_c[-1]]
-        
-    return num_c, den_c
-
-def pole_placement(plant, desired_poles):
-    """
-    Diseño por asignación de polos para sistema en lazo cerrado
-
-    Args:
-        desired_poles: Polos deseados del sistema en lazo cerrado
-
-    Returns:
-        Kp, Ki, Kd: Parámetros PID
-    """
-    # Para un controlador PID: C(s) = Kp + Ki/s + Kd*s
-    # Sistema en lazo cerrado: T(s) = C(s)G(s)/(1 + C(s)G(s))
-
-    # Polinomio característico deseado
-    if len(desired_poles) == 3:
-        # Tres polos: s^3 + a*s^2 + b*s + c = 0
-        poly = np.poly(desired_poles)
-        a, b, c = poly[1], poly[2], poly[3]
-    else:
-        print("Se necesitan 3 polos para sistema de orden 3")
-        return None, None, None
-
-    # Para péndulo invertido, el polinomio característico es:
-    # s^3 + Kd*B*s^2 + (Kp*B - A)*s + Ki*B = 0
-    # donde A = A_theta, B = B_theta
-
-    # Obtener parámetros de la planta
-    if hasattr(plant, 'num') and hasattr(plant, 'den'):
-        num = np.atleast_1d(np.squeeze(plant.num))
-        den = np.atleast_1d(np.squeeze(plant.den))
-        A = -den[2] if len(den) > 2 else 0  # Para inestable: den = [1, 0, -A]
-        B = num[0] if len(num) > 0 else 1.0
-    else:
-        A, B = 15.79, 1.46  # Valores típicos del péndulo
-
-    # Resolver el sistema:
-    # Kd*B = a
-    # Kp*B - A = b
-    # Ki*B = c
-
-    Kd = a / B
-    Kp = (b + A) / B
-    Ki = c / B
-
-    return Kp, Ki, Kd
-
-def simulate_closed_loop_with_initial_condition(pid, t_total, ref_func, initial_theta=0.1, disturbance_func=None, measurement_noise=0.0):
-    """
-    Simula el sistema no lineal en lazo cerrado con condición inicial theta != 0
-    Incluye AUTOTUNING a los 4 segundos.
+    - Arranque: regulador RST diseñado con el modelo ARX nominal (prior).
+    - En cada paso: RLS actualiza [a1, a2, b1, b2].
+    - Tras el warmup y cada `redesign_every` pasos: se rediseña el RST resolviendo
+      la ec. Diofantina con la estimación actual (certainty equivalence).
     """
     N = int(t_total / Ts)
     t_sim = np.arange(N) * Ts
 
-    # Estado completo del sistema no lineal: [x, xdot, theta, thetadot]
-    y_full = np.zeros((4, N)) 
-    y_full[0, 0] = 0.0        
-    y_full[1, 0] = 0.0        
-    y_full[2, 0] = initial_theta  
-    y_full[3, 0] = 0.0        
+    # Estado no lineal completo: [x, xdot, theta, thetadot]
+    y_full = np.zeros((4, N))
+    y_full[2, 0] = initial_theta
 
-    y = np.zeros(N)  # theta
-    u = np.zeros(N)  # control
-    ref = np.zeros(N) 
-    
+    y = np.zeros(N)     # salida (theta)
+    u = np.zeros(N)     # acción de control
+    ref = np.zeros(N)   # referencia
     y[0] = initial_theta
-    pid.reset()
-    
-    # Variables para identificación RLS en línea
-    na, nb = 2, 2
-    n_theta = na + nb 
-    theta_hat = np.zeros(n_theta) # [a1, a2, b1, b2]
-    P = 1000 * np.eye(n_theta)
-    
-    # Historiales para plotear
-    theta_est_history = np.zeros((N, n_theta))
-    pid_history = np.zeros((N, 3)) # [Kp, Ki, Kd]
-    
-    autotuning_done = False
-    AUTOTUNE_TIME = 4.0
-    autotune_k = int(AUTOTUNE_TIME / Ts)
 
-    print(f"Iniciando simulación... Autotuning programado para t={AUTOTUNE_TIME}s")
+    # --- Regulador inicial: diseño con el modelo nominal (prior) para asegurar
+    #     estabilidad desde t=0 (la planta es inestable a lazo abierto) ---
+    R0, S0, t00 = design_rst(THETA_NOMINAL)
+    ctrl_rst = RSTController(R0, S0, t00)
+
+    # --- Estimador RLS: arranca en el prior nominal. La planta se estabiliza
+    #     rápido y la excitación se desvanece (persistencia de excitación, ver
+    #     ICA_STR.pdf), por lo que partir del prior mantiene el estimador bien
+    #     condicionado y el certainty-equivalence estable. ---
+    theta_hat = THETA_NOMINAL.copy()
+    P = 100.0 * np.eye(4)
+
+    # Historiales para graficar
+    theta_est_hist = np.zeros((N, 4))          # [a1, a2, b1, b2]
+    rst_hist = np.zeros((N, 7))                # [r1, r2, r3, s0, s1, s2, t0]
+    redesign_k = None                          # instante del primer rediseño
 
     for k in range(N):
-        # Guardar valores actuales de PID
-        pid_history[k] = [pid.Kp, pid.Ki, pid.Kd]
-        theta_est_history[k] = theta_hat
-        
-        # Referencia
+        theta_est_hist[k] = theta_hat
+        rst_hist[k] = np.concatenate((ctrl_rst.R[1:4], ctrl_rst.S[:3], [ctrl_rst.t0]))
+
         ref[k] = ref_func(t_sim[k])
+        y_measured = y[k] + (np.random.normal(0, measurement_noise)
+                             if measurement_noise > 0.0 else 0.0)
 
-        # Medición con ruido
-        if measurement_noise > 0.0:
-            y_measured = y[k] + np.random.normal(0, measurement_noise)
-        else:
-            y_measured = y[k]
+        # --- RLS: y[k] = -a1 y[k-1] - a2 y[k-2] + b1 u[k-1] + b2 u[k-2] ---
+        if k >= 2:
+            phi = np.array([-y[k - 1], -y[k - 2], u[k - 1], u[k - 2]])
+            if np.linalg.norm(phi) > excite_thresh:  # freno por baja excitación
+                theta_hat, P, _ = rls_step(theta_hat, P, phi, y_measured, lambda_)
 
-        # Error
-        error = y_measured - ref[k]
+        # --- Rediseño periódico del RST (certainty equivalence) ---
+        if k >= warmup_k and (k - warmup_k) % redesign_every == 0:
+            try:
+                R_new, S_new, t0_new = design_rst(theta_hat)
+                if np.all(np.isfinite(R_new)) and np.all(np.isfinite(S_new)) \
+                        and abs(t0_new) < 1e6:
+                    ctrl_rst.set_params(R_new, S_new, t0_new)
+                    if redesign_k is None:
+                        redesign_k = k
+            except np.linalg.LinAlgError:
+                pass  # matriz singular: se mantiene el regulador anterior
 
-        # Control discreto
-        u_control = pid.control(error)
+        # --- Acción de control RST ---
+        u_control = ctrl_rst.control(ref[k], y_measured)
         u[k] = u_control
 
-        
-        if k >= max(na, nb) + 1 and k >= autotune_k:
-            # Vector de regresores phi = [-y[k-1], -y[k-2], u[k-1], u[k-2]]
-            # Notar que u[k-1] es el control aplicado en el paso anterior
-            phi = np.array([-y[k-1], -y[k-2], u[k-1], u[k-2]])
-            
-            # Actualizar estimación
-            theta_hist, P, err, ree = estimador_RLS_lazo_cerrado(u[:k], y[:k])
-        
-        # --- AUTOTUNING TRIGGER ---
-        if not autotuning_done and k >= autotune_k:
-            #print(f"\n[t={t_sim[k]:.2f}s] Ejecutando AUTOTUNING...")
-            
-            # Extraer parámetros identificados
-            a1_est, a2_est, b1_est, b2_est = theta_hist[-1,0], theta_hist[-1,1], -theta_hist[-1,2], -theta_hist[-1,3]
-            theta_hat = [a1_est, a2_est, b1_est, b2_est]
-            if k == autotune_k:
-                theta_est_history[1:len(theta_hist)+1,:] = theta_hist.copy()
-            #print(f"Parámetros estimados: a1={a1_est:.4f}, a2={a2_est:.4f}, b1={b1_est:.4f}, b2={b2_est:.4f}")
-            
-            # Convertir a continuo
-            try:
-                num_c_est, den_c_est = conversion_tustin_manual(a1_est, a2_est, b1_est, b2_est, Ts)
-                Gs_ident = ctrl.TransferFunction(num_c_est, den_c_est)
-                #print(f"Planta identificada G(s): {Gs_ident}")
-                
-                # Calcular nuevos PID
-                new_Kp, new_Ki, new_Kd = pole_placement(Gs_ident, [-3, -3, -10])
-                
-                if new_Kp is not None:
-                    #print(f"Nuevas ganancias PID: Kp={new_Kp:.4f}, Ki={new_Ki:.4f}, Kd={new_Kd:.4f}")
-                    # Actualizar controlador
-                    pid.Kp = new_Kp
-                    pid.Ki = new_Ki
-                    pid.Kd = new_Kd
+        # --- Guarda de divergencia: si el péndulo "cayó" (|theta| grande) se
+        #     detiene la integración para no gastar tiempo en un caso inestable.
+        if not np.isfinite(y[k]) or abs(y[k]) > math.pi / 2:
+            print(f"  [aviso] divergencia en t={t_sim[k]:.2f}s (|theta|>90deg); "
+                  f"se detiene la integración.")
+            y[k:] = np.sign(y[k]) * (math.pi / 2) if np.isfinite(y[k]) else np.nan
+            for j in range(k, N):
+                theta_est_hist[j] = theta_hat
+                rst_hist[j] = np.concatenate((ctrl_rst.R[1:4], ctrl_rst.S[:3], [ctrl_rst.t0]))
+            break
 
-                    autotuning_done = True
-                else:
-                    print("Error en cálculo de PID. Manteniendo anteriores.")
-            except Exception as e:
-                print(f"Fallo en autotuning: {e}")
-                
-        if  autotuning_done and k%10 == 0:#reset autotune
-            autotuning_done = False
-
-        # Integración del modelo no lineal
-        if k < N-1:
-            def ode_with_control(t, y_state):
-                return cartpole_ode(t, y_state, u_control)
-
-            t_span = [t_sim[k], t_sim[k+1]]
-            sol = solve_ivp(ode_with_control, t_span, y_full[:, k],
-                          t_eval=[t_sim[k+1]], method='RK45', rtol=1e-8)
-
+        # --- Integración del modelo no lineal (ZOH sobre u) ---
+        if k < N - 1:
+            def ode(t, ys):
+                return cartpole_ode(t, ys, u_control)
+            sol = solve_ivp(ode, [t_sim[k], t_sim[k + 1]], y_full[:, k],
+                            t_eval=[t_sim[k + 1]], method='RK45', rtol=1e-6,
+                            max_step=Ts)
             if sol.success:
-                y_full[:, k+1] = sol.y[:, -1]
+                y_full[:, k + 1] = sol.y[:, -1]
                 if disturbance_func:
-                    disturbance = disturbance_func(t_sim[k+1])
-                    y_full[2, k+1] += disturbance 
+                    y_full[2, k + 1] += disturbance_func(t_sim[k + 1])
             else:
-                y_full[:, k+1] = y_full[:, k]
+                y_full[:, k + 1] = y_full[:, k]
+            y[k + 1] = y_full[2, k + 1]
 
-            y[k+1] = y_full[2, k+1]
-    
-    return t_sim, y, u, ref, theta_est_history, pid_history
+    return t_sim, y, u, ref, theta_est_hist, rst_hist, redesign_k
 
-def plot_sim_results(t, y, u, ref, theta_hist, pid_hist, title, subplot_offset):
-    # Gráficos de respuesta temporal
-    plt.figure()
-    subplot_offset=1
-    plt.subplot(2, 2, subplot_offset)
+
+# ==============================================================================
+# 4. GRÁFICOS Y GUARDADO
+# ==============================================================================
+
+def plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, title):
+    tr = t[redesign_k] if redesign_k is not None else None
+
+    plt.figure(figsize=(12, 8))
+
+    # Respuesta
+    plt.subplot(2, 2, 1)
     plt.plot(t, y, 'b-', linewidth=1.5, label='theta')
     plt.plot(t, ref, 'k--', linewidth=1, label='Ref')
-    plt.axvline(x=4.0, color='m', linestyle=':', label='Autotune')
+    if tr is not None:
+        plt.axvline(x=tr, color='m', linestyle=':', label='Rediseño STR')
     plt.ylabel('Theta [rad]')
     plt.title(f'{title} - Respuesta')
     plt.grid(True)
     plt.legend(loc='upper right', fontsize='small')
 
-    plt.subplot(2, 2, subplot_offset + 1)
-    plt.plot(t, u, 'r-', linewidth=1.5, label='Control u')
-    plt.axvline(x=4.0, color='m', linestyle=':')
+    # Acción de control
+    plt.subplot(2, 2, 2)
+    plt.plot(t, u, 'r-', linewidth=1.0, label='Control u')
+    if tr is not None:
+        plt.axvline(x=tr, color='m', linestyle=':')
     plt.ylabel('u')
     plt.title('Acción de Control')
     plt.grid(True)
 
-    # Evolución de parámetros estimados
-    plt.subplot(2, 2, subplot_offset + 2)
+    # Parámetros estimados por RLS
+    plt.subplot(2, 2, 3)
     labels = ['$a_1$', '$a_2$', '$b_1$', '$b_2$']
     colors = ['c', 'm', 'y', 'k']
     for i in range(4):
         plt.plot(t, theta_hist[:, i], color=colors[i], label=labels[i], linewidth=1)
-    plt.axvline(x=4.0, color='r', linestyle='--')
+    if tr is not None:
+        plt.axvline(x=tr, color='r', linestyle='--')
     plt.ylabel('Valor')
-    plt.title('Estimación RLS')
+    plt.xlabel('t [s]')
+    plt.title('Estimación RLS de A(q), B(q)')
     plt.grid(True)
     plt.legend(loc='best', fontsize='small', ncol=2)
 
-    # Evolución de ganancias PID
-    plt.subplot(2, 2, subplot_offset + 3)
-    plt.plot(t, pid_hist[:, 0], label='Kp')
-    plt.plot(t, pid_hist[:, 1], label='Ki')
-    plt.plot(t, pid_hist[:, 2], label='Kd')
-    plt.axvline(x=4.0, color='r', linestyle='--')
-    plt.ylabel('Ganancia')
-    plt.title('Ganancias PID')
+    # Coeficientes del regulador RST
+    plt.subplot(2, 2, 4)
+    rst_labels = ['$r_1$', '$r_2$', '$r_3$', '$s_0$', '$s_1$', '$s_2$']
+    for i in range(6):
+        plt.plot(t, rst_hist[:, i], label=rst_labels[i], linewidth=1)
+    if tr is not None:
+        plt.axvline(x=tr, color='r', linestyle='--')
+    plt.ylabel('Coef.')
+    plt.xlabel('t [s]')
+    plt.title('Coeficientes del regulador RST')
     plt.grid(True)
-    plt.legend(loc='best', fontsize='small')
+    plt.legend(loc='best', fontsize='small', ncol=3)
+
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f'autotuning_completo_{title}.png'), dpi=300)
-    print(f"\nResultados guardados en {output_dir}")
-    plt.show()
+    os.makedirs(output_dir, exist_ok=True)
+    fname = os.path.join(output_dir, f'str_{title}.png')
+    plt.savefig(fname, dpi=300, bbox_inches='tight')
+    print(f"Gráfico guardado en {fname}")
+    plt.close()
+
+
+def save_run_data(filename, t, y, u, ref, theta_hist, rst_hist):
+    os.makedirs(save_dir, exist_ok=True)
+    df = pd.DataFrame({
+        't': t, 'y': y, 'u': u, 'ref': ref,
+        'a1_est': theta_hist[:, 0], 'a2_est': theta_hist[:, 1],
+        'b1_est': theta_hist[:, 2], 'b2_est': theta_hist[:, 3],
+        'r1': rst_hist[:, 0], 'r2': rst_hist[:, 1], 'r3': rst_hist[:, 2],
+        's0': rst_hist[:, 3], 's1': rst_hist[:, 4], 's2': rst_hist[:, 5],
+        't0': rst_hist[:, 6],
+    })
+    path = os.path.join(save_dir, filename)
+    df.to_csv(path, index=False)
+    print(f"Datos guardados en {path}")
+
+
+# ==============================================================================
+# PROGRAMA PRINCIPAL
+# ==============================================================================
 
 def main():
-    output_dir = "presentacion_pid_pendulo/imagenes_pid_autotunning"
     os.makedirs(output_dir, exist_ok=True)
-
-    print("\n=== SIMULACIÓN: AUTOTUNING PID ONLINE ===")
-
-    # PID Inicial (Desintonizado intencionalmente o conservador)
-    Kp_ini, Ki_ini, Kd_ini = 40.0, 1.0, 5.0 
-    print(f"PID Inicial: Kp={Kp_ini}, Ki={Ki_ini}, Kd={Kd_ini}")
-    
-    T_SIM = 20.0
-    INITIAL_THETA = 0.1
-    
-
-
-    # Guardar datos de simulación
-    save_dir = "saved_runs_pid_autotunning"
     os.makedirs(save_dir, exist_ok=True)
 
-    def save_run_data(filename, t, y, u, ref, theta_hist, pid_hist):
-        # theta_hist: [a1, a2, b1, b2]
-        # pid_hist: [Kp, Ki, Kd]
-        df = pd.DataFrame({
-            't': t,
-            'y': y,
-            'u': u,
-            'ref': ref,
-            'a1_est': theta_hist[:, 0],
-            'a2_est': theta_hist[:, 1],
-            'b1_est': theta_hist[:, 2],
-            'b2_est': theta_hist[:, 3],
-            'Kp': pid_hist[:, 0],
-            'Ki': pid_hist[:, 1],
-            'Kd': pid_hist[:, 2]
-        })
-        path = os.path.join(save_dir, filename)
-        df.to_csv(path, index=False)
-        print(f"Datos guardados en {path}")
+    print("=== STR ADAPTATIVO INDIRECTO (TIEMPO DISCRETO) - PÉNDULO INVERTIDO ===")
+    a1n, a2n, b1n, b2n = THETA_NOMINAL
+    print(f"G(z) nominal = ({b1n:.6f} z + {b2n:.6f}) / (z^2 {a1n:+.4f} z {a2n:+.4f})")
+    print(f"ARX nominal [a1, a2, b1, b2] = {np.round(THETA_NOMINAL, 6)}")
+    print(f"Polos LC discretos deseados  = {np.round(POLOS_LC, 4)}")
+    R0, S0, t00 = design_rst(THETA_NOMINAL)
+    print(f"Regulador inicial: R = {np.round(R0, 4)}")
+    print(f"                   S = {np.round(S0, 4)}")
+    print(f"                   t0 = {t00:.4f}\n")
 
-    # 1. Sin perturbaciones
-    pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
-    t1, y1, u1, ref1, th1, pid_h1 = simulate_closed_loop_with_initial_condition(
-        pid, t_total=T_SIM, ref_func=lambda t: 0.0, initial_theta=INITIAL_THETA
-    )
-    plot_sim_results(t1, y1, u1, ref1, th1, pid_h1, "Sin Perturbaciones", 1)
-    save_run_data('sin_perturbaciones.csv', t1, y1, u1, ref1, th1, pid_h1)
+    T_SIM = 20.0
+    INITIAL_THETA = 0.1
 
-    # 2. Perturbación Sinusoidal
-    pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
-    t2, y2, u2, ref2, th2, pid_h2 = simulate_closed_loop_with_initial_condition(
-        pid, t_total=T_SIM, ref_func=lambda t: 0.0, initial_theta=INITIAL_THETA,
-        disturbance_func=lambda t: 0.005 * np.sin(2 * np.pi * 0.5 * t)
-    )
-    plot_sim_results(t2, y2, u2, ref2, th2, pid_h2, "Pert. Sinusoidal", 5)
-    save_run_data('pert_sinusoidal.csv', t2, y2, u2, ref2, th2, pid_h2)
-    
-    # 3. Perturbación Escalón
-    pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
-    t3, y3, u3, ref3, th3, pid_h3 = simulate_closed_loop_with_initial_condition(
-        pid, t_total=T_SIM, ref_func=lambda t: 0.0, initial_theta=INITIAL_THETA,
-        disturbance_func=lambda t: 0.01 if t > 6.0 and t < 8.0 else 0.0
-    )
-    plot_sim_results(t3, y3, u3, ref3, th3, pid_h3, "Pert. Escalón", 9)
-    save_run_data('pert_escalon.csv', t3, y3, u3, ref3, th3, pid_h3)
+    escenarios = [
+        ("Sin_Perturbaciones", dict()),
+        ("Pert_Sinusoidal", dict(disturbance_func=lambda t: 0.005 * np.sin(2 * np.pi * 0.5 * t))),
+        ("Pert_Escalon", dict(disturbance_func=lambda t: 0.01 if 6.0 < t < 8.0 else 0.0)),
+        ("Ruido_Medicion", dict(measurement_noise=0.005)),
+    ]
 
-    # 4. Ruido de Medición
-    pid = PIDController(Kp=Kp_ini, Ki=Ki_ini, Kd=Kd_ini)
-    t4, y4, u4, ref4, th4, pid_h4 = simulate_closed_loop_with_initial_condition(
-        pid, t_total=T_SIM, ref_func=lambda t: 0.0, initial_theta=INITIAL_THETA,
-        measurement_noise=0.005
-    )
-    plot_sim_results(t4, y4, u4, ref4, th4, pid_h4, "Ruido Medición", 13)
-    save_run_data('ruido_medicion.csv', t4, y4, u4, ref4, th4, pid_h4)
+    for nombre, kwargs in escenarios:
+        print(f"--- Escenario: {nombre} ---")
+        res = simulate_closed_loop_str(
+            t_total=T_SIM, ref_func=lambda t: 0.0,
+            initial_theta=INITIAL_THETA, **kwargs
+        )
+        t, y, u, ref, theta_hist, rst_hist, redesign_k = res
+        plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, nombre)
+        save_run_data(f'{nombre.lower()}.csv', t, y, u, ref, theta_hist, rst_hist)
+        print(f"theta final estimado = {np.round(theta_hist[-1], 5)}")
+        print(f"|theta|_max = {np.max(np.abs(y)):.5f} rad,  |u|_max = {np.max(np.abs(u)):.2f}\n")
 
-    
 
 if __name__ == "__main__":
     main()

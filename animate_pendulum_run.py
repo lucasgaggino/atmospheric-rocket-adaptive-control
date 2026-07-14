@@ -17,10 +17,10 @@ def animate_from_csv(csv_path, output_video_path):
     theta = df['y'].values
     u = df['u'].values
     
-    # Extract PID params and estimated params
-    Kp = df['Kp'].values
-    Ki = df['Ki'].values
-    Kd = df['Kd'].values
+    # Extract RST controller coeffs and estimated ARX params
+    s0 = df['s0'].values
+    s1 = df['s1'].values
+    s2 = df['s2'].values
     a1_est = df['a1_est'].values
     a2_est = df['a2_est'].values
     b1_est = df['b1_est'].values
@@ -65,20 +65,21 @@ def animate_from_csv(csv_path, output_video_path):
     ax_control.legend(fontsize='small', loc='upper right')
     ax_control.set_xlabel('Time [s]')
 
-    # PID Values Subplot (Right Top)
-    ax_pid = fig.add_subplot(gs[0, 3])
-    ax_pid.set_title('PID Gains')
-    ax_pid.set_xlim(0, t[-1])
+    # RST Controller Coeffs Subplot (Right Top)
+    ax_rst = fig.add_subplot(gs[0, 3])
+    ax_rst.set_title('RST S(q) coeffs')
+    ax_rst.set_xlim(0, t[-1])
     # Auto-scale Y based on data range + margin
-    pid_min = min(Kp.min(), Ki.min(), Kd.min())
-    pid_max = max(Kp.max(), Ki.max(), Kd.max())
-    ax_pid.set_ylim(pid_min - 5, pid_max + 5)
-    ax_pid.grid(True, alpha=0.3)
+    s_min = min(s0.min(), s1.min(), s2.min())
+    s_max = max(s0.max(), s1.max(), s2.max())
+    margin = max(5.0, 0.05 * (s_max - s_min))
+    ax_rst.set_ylim(s_min - margin, s_max + margin)
+    ax_rst.grid(True, alpha=0.3)
     
-    line_kp, = ax_pid.plot([], [], 'r-', label='Kp', lw=1.5)
-    line_ki, = ax_pid.plot([], [], 'g-', label='Ki', lw=1.5)
-    line_kd, = ax_pid.plot([], [], 'b-', label='Kd', lw=1.5)
-    ax_pid.legend(fontsize='small', loc='upper right')
+    line_s0, = ax_rst.plot([], [], 'r-', label='s0', lw=1.5)
+    line_s1, = ax_rst.plot([], [], 'g-', label='s1', lw=1.5)
+    line_s2, = ax_rst.plot([], [], 'b-', label='s2', lw=1.5)
+    ax_rst.legend(fontsize='small', loc='upper right')
 
     # Estimated Params Subplot 1 (Right Middle)
     ax_est_a = fig.add_subplot(gs[1, 3])
@@ -138,9 +139,9 @@ def animate_from_csv(csv_path, output_video_path):
         time_text.set_text('')
         
         # Init lines for subplots
-        line_kp.set_data([], [])
-        line_ki.set_data([], [])
-        line_kd.set_data([], [])
+        line_s0.set_data([], [])
+        line_s1.set_data([], [])
+        line_s2.set_data([], [])
         line_a1.set_data([], [])
         line_a2.set_data([], [])
         line_b1.set_data([], [])
@@ -148,7 +149,7 @@ def animate_from_csv(csv_path, output_video_path):
         line_angle.set_data([], [])
         line_control.set_data([], [])
         
-        return cart, line, mass, time_text, line_kp, line_ki, line_kd, line_a1, line_a2, line_b1, line_b2, line_angle, line_control
+        return cart, line, mass, time_text, line_s0, line_s1, line_s2, line_a1, line_a2, line_b1, line_b2, line_angle, line_control
 
     def update(frame):
         current_theta = theta[frame]
@@ -160,9 +161,9 @@ def animate_from_csv(csv_path, output_video_path):
         # Since we are stepping frames, using slice :frame+1 is correct
         t_slice = t[:frame+1]
         
-        line_kp.set_data(t_slice, Kp[:frame+1])
-        line_ki.set_data(t_slice, Ki[:frame+1])
-        line_kd.set_data(t_slice, Kd[:frame+1])
+        line_s0.set_data(t_slice, s0[:frame+1])
+        line_s1.set_data(t_slice, s1[:frame+1])
+        line_s2.set_data(t_slice, s2[:frame+1])
         
         line_a1.set_data(t_slice, a1_est[:frame+1])
         line_a2.set_data(t_slice, a2_est[:frame+1])
@@ -235,7 +236,7 @@ def animate_from_csv(csv_path, output_video_path):
 
         time_text.set_text(f'Time = {current_t:.2f} s\nTheta = {current_theta:.2f} rad\nu = {current_u:.2f}')
         
-        return cart, line, mass, arrow_ax, time_text, line_kp, line_ki, line_kd, line_a1, line_a2, line_b1, line_b2, line_angle, line_control
+        return cart, line, mass, arrow_ax, time_text, line_s0, line_s1, line_s2, line_a1, line_a2, line_b1, line_b2, line_angle, line_control
 
     # Frames
     # reduce fps for speed if needed, or skip frames
