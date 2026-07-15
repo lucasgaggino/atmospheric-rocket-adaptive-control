@@ -48,10 +48,12 @@ A_\theta = 15{,}79, \quad B_\theta = -1{,}4634
 \]
 El signo $B_\theta < 0$ es físico: $F>0$ reduce $\theta$.
 \end{block}
+{\footnotesize Se integran los 4 estados $[x,\dot x,\theta,\dot\theta]$; el
+control sólo usa $\theta$. $l$ = distancia pivote--centro de masa.}
 \end{frame}
 
 \begin{frame}{Discretización ZOH analítica $\rightarrow$ modelo ARX}
-\begin{block}{Sin pasar por tiempo continuo}
+\begin{block}{Se discretiza una única vez; luego todo es discreto}
 Para $G(s) = B_\theta/(s^2 - w^2)$, $w = \sqrt{A_\theta}$, con $T_s = 0{,}02$~s:
 \[
 A(z) = z^2 - 2\cosh(wT_s)z + 1, \quad
@@ -101,9 +103,10 @@ Se resuelve armando la \textbf{matriz de Sylvester} (Toeplitz de $A$ y $B$).
 y = \frac{BT}{AR+BS}\,r + \frac{BR}{AR+BS}\,v
 \]
 \begin{itemize}
-  \item Perturbación escalón $\Rightarrow$ $R$ debe tener raíz en $z=1$
-  (integrador $1-q^{-1}$).
-  \item Ruido de medición $\Rightarrow$ RLS lo filtra.
+  \item Perturbación escalón $\Rightarrow$ $R$ con factor $1-q^{-1}$ (operador
+  diferencia): al despejar $u$ aparece su inversa $\Rightarrow$ acción integral.
+  \item Ruido de medición $\Rightarrow$ factor $z+1$ en $S$. El RLS \textbf{no
+  filtra} el ruido (puede sesgar la estimación) $\Rightarrow$ mejoras de robustez.
 \end{itemize}
 \end{block}
 \end{frame}
@@ -131,7 +134,7 @@ $\ \hat\theta = [a_1,a_2,b_1,b_2]$, $\lambda = 0{,}995$.
 
 \begin{frame}{Diseño discreto: pasos}
 \begin{enumerate}
-  \item \textbf{Integrador}: diseñar sobre $\bar A = A(1-q^{-1})$ (grado 3),
+  \item \textbf{Acción integral}: diseñar sobre $\bar A = A(1-q^{-1})$ (grado 3),
   luego $R = (1-q^{-1})\bar R$.
   \item \textbf{Polos LC}: mapear $\{-3,-3,-10\}$ con $z=e^{sT_s}$
   $\rightarrow \{0{,}942,\ 0{,}942,\ 0{,}819\}$ + 2 auxiliares en $0{,}2$
@@ -200,14 +203,15 @@ Estabilización desde $\theta(0)=0{,}1$; RLS converge a los valores reales.
 \end{center}
 \end{frame}
 
-\begin{frame}{Resultados: perturbación escalón}
+\begin{frame}{Resultados: pulso rectangular ($t\in[6,8]$, en la salida)}
 \begin{center}
 \includegraphics[width=0.9\textwidth]{imagenes_pid_autotunning/str_Pert_Escalon.png}
 \end{center}
-El integrador $(1-q^{-1})$ en $R$ rechaza la perturbación escalón.
+La acción integral (factor $1-q^{-1}$ en $R$) rechaza el pulso. Es un pulso
+rectangular (no un escalón sostenido).
 \end{frame}
 
-\begin{frame}{Resultados: ruido de medición}
+\begin{frame}{Resultados: ruido de medición ($\sigma$ sólo en $y_{\text{medida}}$)}
 \begin{center}
 \includegraphics[width=0.9\textwidth]{imagenes_pid_autotunning/str_Ruido_Medicion.png}
 \end{center}
@@ -225,16 +229,18 @@ El lazo es estable, pero el regulador \textbf{no converge} (persigue el ruido).
   \item Causa raíz: el numerador $B$ es diminuto ($b_1{+}b_2\approx-5{,}9\times10^{-4}$)
   y va al \textbf{denominador} del diseño ($t_0=A_{lc}(1)/B(1)$, Sylvester).
   \item Un pequeño error en $b$ (por ruido o \emph{covariance windup}) se
-  amplifica: $b_1$ cambia de signo, $s_0$ crece $\sim4\times$ y deriva.
-  \item Consecuencia: los polos logrados \emph{sobre la planta real} se corren al
-  borde ($0{,}989$--$0{,}995$), perdiendo margen.
+  amplifica: $b_1$ cambia de signo, $s_1$ crece $\sim4\times$ y deriva.
+  \item Consecuencia: los polos de LC \emph{sobre el modelo nominal} se corren al
+  borde ($0{,}989$--$0{,}995$), perdiendo margen. Con ruido incluso superan
+  $|z|=1$ en algunos rediseños (diseño momentáneamente inestable).
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Variante robusta (comparable con la básica)}
 \begin{block}{Mejoras (flag \texttt{robust})}
 \begin{itemize}
-  \item Regresor consistente con la salida medida.
+  \item Regresor construido con la salida medida (no resuelve errores en
+  variables; sólo da consistencia).
   \item \textbf{Zona muerta} en RLS ($\sim\sigma\lVert[1,a_1,a_2]\rVert$): no
   adapta sobre ruido/perturbación puros.
   \item Anti \emph{windup} de covarianza (acota $\mathrm{tr}(P)$).
@@ -242,21 +248,74 @@ El lazo es estable, pero el regulador \textbf{no converge} (persigue el ruido).
   (signo/magnitud de $b$, $\lVert S\rVert$, estabilidad) + congelamiento.
 \end{itemize}
 \end{block}
-Resultado: $R,S,T$ convergen y se recuperan \textbf{exactamente} los polos de
-diseño ($\max|z|=0{,}9418$) en los 4 escenarios.
+Resultado: $R,S,T$ convergen y se recuperan los polos de diseño
+($\max|z|=0{,}9418$). \emph{Ojo}: como el prior $\approx$ planta, esto demuestra
+sobre todo \textbf{robustez} (ver slide de autoajuste).
 \end{frame}
 
-\begin{frame}{Comparación: convergencia del regulador}
+\begin{frame}{Comparación detallada: sinusoidal y ruido}
 \begin{columns}
 \begin{column}{0.5\textwidth}
-\includegraphics[width=\textwidth]{imagenes_pid_autotunning/str_convergencia.png}
+\includegraphics[width=\textwidth]{imagenes_pid_autotunning/str_cmp_detalle_Pert_Sinusoidal.png}
+\centering {\scriptsize Sinusoidal}
 \end{column}
 \begin{column}{0.5\textwidth}
-\includegraphics[width=\textwidth]{imagenes_pid_autotunning/str_cmp_Ruido_Medicion.png}
+\includegraphics[width=\textwidth]{imagenes_pid_autotunning/str_cmp_detalle_Ruido_Medicion.png}
+\centering {\scriptsize Ruido}
 \end{column}
 \end{columns}
-\centering \small Básico (rojo) deriva; robusto (azul) converge. Validado con
+\centering \small Básico (trazo punteado): $S$ deriva y el radio de polos sube (o
+supera $|z|=1$). Robusto (trazo sólido): coeficientes constantes, margen
+preservado.
+Con ruido, RMS$_\theta$ baja $\sim6\times$.
+\end{frame}
+
+\begin{frame}{Convergencia del regulador (resumen)}
+\begin{center}
+\includegraphics[width=0.72\textwidth]{imagenes_pid_autotunning/str_convergencia.png}
+\end{center}
+\centering \small std$(s_0)$ en la ventana final (log): básico (rojo) no converge
+con sinusoidal/ruido; robusto (azul) converge siempre. Validado con
 \texttt{test\_str\_pendulo.py} (todos los tests pasan).
+\end{frame}
+
+\begin{frame}{Autoajuste (1): carro 50\% más pesado $\Rightarrow$ cambia $b$}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\includegraphics[width=\textwidth]{imagenes_pid_autotunning/str_self_tuning.png}
+\end{column}
+\begin{column}{0.45\textwidth}
+{\small
+Con prior $\approx$ planta, el robusto \emph{congela} el nominal (robustez). Con
+planta distinta + excitación se ve el \textbf{self-tuning}:
+\begin{itemize}
+  \item ganancia estimada $\to$ real
+  ($b_1{+}b_2: -5{,}9\!\to\!-3{,}9\times10^{-4}$);
+  \item $S$ se rediseña: $[-367,697,-331]\to[-551,1048,-498]$; final $\neq$ nominal, estable.
+\end{itemize}
+\textbf{$a_1,a_2$ no cambian}: $a_2\equiv1$ (estructural) y $a_1$ depende de
+$A_\theta\!\propto\!\frac{M+m}{4M+m}$, casi insensible a $M$. La masa sólo afecta
+la ganancia $B_\theta\!\propto\!1/M$.}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Autoajuste (2): barra 10\% más larga $\Rightarrow$ mueve $a_1$}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\includegraphics[width=\textwidth]{imagenes_pid_autotunning/str_self_tuning_l.png}
+\end{column}
+\begin{column}{0.45\textwidth}
+{\small
+Alargar la barra sí cambia $A_\theta$ y por lo tanto el polo:
+\begin{itemize}
+  \item $a_1: -2{,}00632 \to -2{,}00599$ (real $-2{,}00575$); $b$ también converge;
+  \item $S$ se rediseña a $[-402,766,-364]$ (planta real); lazo estable.
+\end{itemize}
+$a_1$ multiplica a $y\approx0$ (regulado) $\Rightarrow$ peor excitado que $b$
+(multiplica a $u$): requiere \textbf{más dither} y \textbf{menor zona muerta}.}
+\end{column}
+\end{columns}
 \end{frame}
 
 % ==================================================================
@@ -265,18 +324,19 @@ diseño ($\max|z|=0{,}9418$) en los 4 escenarios.
 
 \begin{frame}{Conclusiones}
 \begin{itemize}
-  \item Se implementó un STR adaptativo indirecto \textbf{100\% discreto} que
-  estabiliza el péndulo invertido inestable.
-  \item Estimación RLS + ecuación Diofantina (Sylvester) + ley RST, con
-  integrador y sin cancelar el cero no de fase mínima.
-  \item Validado en 4 escenarios y con una suite de tests automáticos.
-  \item El lazo es estable siempre, pero $R,S,T$ solo convergen con la
-  \textbf{variante robusta} (zona muerta + gate + anti-windup): recupera los
-  polos de diseño ($0{,}9418$) con ruido y perturbaciones.
-  \item \textbf{Self-tuning}: el regulador converge al que se diseñaría
-  conociendo la planta.
-  \item Clave práctica: numerador diminuto en el denominador del diseño $\Rightarrow$
-  hay que proteger la estimación (persistencia de excitación, zona muerta, gate).
+  \item STR indirecto \textbf{en tiempo discreto} (RLS + Diofantina/Sylvester +
+  ley RST, con acción integral y sin cancelar el cero no de fase mínima) que
+  estabiliza la dinámica angular del péndulo invertido.
+  \item El diseño nominal reproduce exactamente los polos deseados; la variante
+  robusta mantiene el desempeño acotado ante perturbaciones y ruido (RMS$_\theta$
+  hasta $\sim6\times$ menor con ruido, margen preservado).
+  \item Con prior $\approx$ planta y regulación, los 4 escenarios demuestran sobre
+  todo \textbf{estabilidad y robustez}.
+  \item El \textbf{autoajuste} propiamente dicho se validó aparte: con planta
+  $50\%$ más pesada y excitación, el RLS va del prior a la planta real y el RST se
+  rediseña a un controlador \emph{distinto} del nominal, estable.
+  \item Clave práctica: numerador diminuto en el denominador del diseño
+  $\Rightarrow$ proteger la estimación (excitación, zona muerta, gate).
 \end{itemize}
 \end{frame}
 

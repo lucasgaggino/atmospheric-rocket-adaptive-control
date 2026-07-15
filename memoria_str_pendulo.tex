@@ -58,7 +58,7 @@
 
 Este trabajo implementa y valida un controlador adaptativo del tipo
 \emph{Self-Tuning Regulator} (STR) para estabilizar el péndulo invertido en su
-posición vertical (equilibrio inestable). El objetivo del trabajo práctico es:
+posición vertical. El objetivo del trabajo práctico es:
 
 \begin{enumerate}[nosep]
   \item Implementar un controlador para la planta.
@@ -67,26 +67,22 @@ posición vertical (equilibrio inestable). El objetivo del trabajo práctico es:
   \item Validar el funcionamiento ante distintas condiciones.
 \end{enumerate}
 
-A diferencia de la implementación previa ---que estimaba un modelo por RLS, lo
-convertía a tiempo continuo mediante la aproximación bilineal (Tustin) y recién
-allí calculaba las ganancias PID por colocación de polos--- en esta memoria
-\textbf{todo el diseño del regulador se realiza enteramente en tiempo discreto}.
-No se utiliza ninguna transformación $s \leftrightarrow z$ ni librerías de
-tiempo continuo: la planta se describe por su modelo ARX discreto y el
-controlador se obtiene resolviendo la ecuación Diofantina en el operador
-retardo $q^{-1}$, siguiendo el método STR presentado en la teoría de la materia
-(\texttt{ICA\_STR.pdf}).
+En este proyecto el diseño del regulador se realiza enteramente en tiempo discreto. La
+planta nominal se discretiza una única vez mediante ZOH analítico; a
+partir de allí, la identificación y el diseño del regulador son íntegramente
+discretos: la planta se describe por su modelo ARX y el controlador se obtiene
+resolviendo la ecuación Diofantina en el operador retardo $q^{-1}$, \textbf{sin
+transformar el controlador nuevamente a tiempo continuo} (p.\,ej.\ por Tustin),
+siguiendo el método STR.
 
 La estructura elegida es un \textbf{STR adaptativo indirecto}: en línea se
 estiman los polinomios $A(q)$ y $B(q)$ de la planta por mínimos cuadrados
 recursivos (RLS) y, por \emph{certainty equivalence}, se rediseña el regulador
-resolviendo la identidad de Bézout $A R + B S = A_{lc}$.
+resolviendo la ecuación Diofantina $A R + B S = A_{lc}$.
 
 % ==================================================================
 \section{Marco Teórico: el Self-Tuning Regulator}
 % ==================================================================
-
-El material teórico de esta sección se basa en \texttt{ICA\_STR.pdf}.
 
 \subsection{Control adaptativo y self-tuning}
 
@@ -107,7 +103,7 @@ En este trabajo se usa la variante \textbf{indirecta}.
 \subsection{Modelo de la planta y ley de control RST}
 
 Se considera un sistema SISO lineal expresado en el operador retardo, con una
-perturbación de carga $v_k$ a la entrada:
+perturbación $v_k$ a la entrada:
 \begin{equation}
   A(q)\, y_k = B(q)\,(u_k + v_k),
 \end{equation}
@@ -126,7 +122,7 @@ donde $S/R$ es la realimentación (\emph{feedback}) y $T/R$ el prealimentador
 \subsection{Diseño por colocación de polos y ecuación Diofantina}
 
 Se impone el polinomio característico deseado de lazo cerrado $A_{lc}(q)$
-mediante la \emph{identidad de Bézout} (ecuación Diofantina):
+mediante la ecuación Diofantina:
 \begin{equation}
   A(q)\,R(q) + B(q)\,S(q) = A_{lc}(q).
   \label{eq:diof}
@@ -143,11 +139,14 @@ Del numerador de la perturbación en \eqref{eq:lc}, $B\,R$, se desprenden las
 reglas de diseño:
 \begin{itemize}[nosep]
   \item \textbf{Perturbación de carga escalón en $v$:} $B$ o $R$ deben tener una
-  raíz en $z=1$. La clave está en diseñar $R$ con el factor $(1-q^{-1})$
-  (acción integral).
-  \item \textbf{Ruido de medición $e$:} para no amplificar alta frecuencia se
-  puede forzar un término $z+1$ en $S$ (aquí no es necesario porque el estimador
-  RLS ya filtra el ruido).
+  raíz en $z=1$. La clave está en incluir el factor $(1-q^{-1})$ en $R$: como el
+  integrador discreto es $1/(1-q^{-1})$, al despejar $u$ aparece su inversa y la
+  ley adquiere \emph{acción integral}.
+  \item \textbf{Ruido de medición $e$:} para atenuar el efecto de alta frecuencia
+  puede incorporarse el factor $z+1$ en $S$. El RLS estándar \textbf{no filtra
+  por sí mismo} el ruido de medición y, en un modelo ARX, puede producir
+  estimaciones sesgadas (\emph{errores en variables}); esto motiva las mejoras de
+  robustez de la Sección~7.
 \end{itemize}
 
 \subsection{Estimación recursiva (RLS con olvido)}
@@ -183,18 +182,36 @@ pasos. Es crítico garantizar la \emph{persistencia de excitación}.
 \subsection{Modelo no lineal}
 
 La planta ``real'' que se controla en la simulación es el modelo no lineal del
-carro-péndulo, con estado $[x, \dot x, \theta, \dot\theta]$:
-\begin{equation}
-  \ddot\theta = \frac{g\sin\theta - \cos\theta \cdot \dfrac{F + m l \dot\theta^2 \sin\theta}{M+m}}
-  {l\left(\tfrac{4}{3} - \dfrac{m\cos^2\theta}{M+m}\right)},
-\end{equation}
-con $M = 1{,}0$~kg, $m = 0{,}1$~kg, $l = 0{,}5$~m, $g = 9{,}81$~m/s$^2$. Se
-integra con Runge-Kutta manteniendo la acción de control constante en cada
-período (ZOH).
+carro-péndulo. Se integran los \textbf{cuatro} estados $[x, \dot x, \theta,
+\dot\theta]$ (aunque el control sólo usa $\theta$):
+\begin{align}
+  \ddot\theta &= \frac{g\sin\theta - \cos\theta \cdot \dfrac{F + m l \dot\theta^2 \sin\theta}{M+m}}
+  {l\left(\tfrac{4}{3} - \dfrac{m\cos^2\theta}{M+m}\right)}, \\[0.4em]
+  \ddot x &= \frac{F + m l \dot\theta^2 \sin\theta}{M+m} - \frac{m l \ddot\theta \cos\theta}{M+m},
+\end{align}
+con $M = 1{,}0$~kg (carro), $m = 0{,}1$~kg (barra), $g = 9{,}81$~m/s$^2$ y
+$l = 0{,}5$~m la \textbf{distancia del pivote al centro de masa} (media longitud
+de la barra); el término $\tfrac{4}{3}$ proviene del momento de inercia de una
+barra uniforme. Se integra con Runge-Kutta manteniendo la acción de control
+constante en cada período (ZOH). Como no se controla la posición del carro, $x$
+y $\dot x$ no intervienen en el diseño; la dinámica angular alcanza para el
+control.
 
 \subsection{Linealización}
 
-Alrededor del equilibrio inestable ($\theta = 0$):
+Se linealiza mediante el \textbf{jacobiano} de $\ddot\theta = f(\theta,
+\dot\theta, F)$ evaluado en el equilibrio inestable $(\theta, \dot\theta, F) =
+(0, 0, 0)$ (desarrollo de Taylor de primer orden):
+\begin{equation}
+  A_\theta = \left.\frac{\partial f}{\partial \theta}\right|_{eq}, \qquad
+  B_\theta = \left.\frac{\partial f}{\partial F}\right|_{eq}, \qquad
+  \left.\frac{\partial f}{\partial \dot\theta}\right|_{eq} = 0,
+\end{equation}
+donde el término en $\dot\theta$ se anula porque el único aporte, $m l
+\dot\theta^2 \sin\theta$, tiene derivada $2 m l \dot\theta \sin\theta = 0$ en el
+equilibrio. Evaluando las derivadas (equivalente a la aproximación de ángulo
+pequeño $\sin\theta\approx\theta$, $\cos\theta\approx1$ y despreciando el término
+cuadrático $\dot\theta^2\sin\theta$) se obtiene:
 \begin{equation}
   \ddot\theta = A_\theta\,\theta + B_\theta\,F, \qquad
   A_\theta = \frac{3g(M+m)}{l(4M+m)} = 15{,}79, \qquad
@@ -206,7 +223,6 @@ realimentación positiva y el lazo diverge.
 
 \subsection{Discretización ZOH analítica y modelo ARX}
 
-En lugar de usar librerías de tiempo continuo, se discretiza analíticamente.
 Para $G(s) = B_\theta/(s^2 - w^2)$ con $w = \sqrt{A_\theta}$, el mantenedor de
 orden cero da:
 \begin{equation}
@@ -233,8 +249,11 @@ on-line.
 
 \subsection{Estructura elegida}
 
-STR indirecto, por colocación de polos, \textbf{sin cancelación de ceros} y
-\textbf{con integrador}. Para incorporar la acción integral se diseña sobre
+STR indirecto, por colocación de polos, \textbf{sin cancelación de ceros} y con
+\textbf{acción integral}. El factor $1-q^{-1}$ es el operador \emph{diferencia};
+el integrador discreto es $1/(1-q^{-1})$. Al incluir $1-q^{-1}$ en $R$, al
+despejar $u$ de \eqref{eq:rst} aparece su inversa y la ley de control adquiere
+acción integral. Para ello se diseña sobre
 \begin{equation}
   \bar A(q) = A(q)\,(1 - q^{-1}),
 \end{equation}
@@ -247,12 +266,16 @@ mapeada a discreto con $z = e^{s T_s}$:
 \begin{equation}
   \{-3,-3,-10\} \;\to\; \{0{,}9418,\ 0{,}9418,\ 0{,}8187\}.
 \end{equation}
-La Diofantina con integrador requiere $\deg(A_{lc}) = 5$, por lo que se agregan
-dos polos auxiliares rápidos en $z = 0{,}2$ (bien amortiguados, cerca del
-origen) para completar el grado sin alterar la dinámica dominante:
+La Diofantina con acción integral requiere $\deg(A_{lc}) = 5$, por lo que se
+agregan dos polos auxiliares rápidos en $z = 0{,}2$ (bien amortiguados, cerca
+del origen) para completar el grado sin alterar la dinámica dominante. Para
+mantener coherencia con la ecuación Diofantina (planteada en $q^{-1}$), se
+escribe:
 \begin{equation}
-  A_{lc}(z) = (z-0{,}9418)^2 (z-0{,}8187)(z-0{,}2)^2 .
+  A_{lc}(q^{-1}) = \prod_{i=1}^{5}\big(1 - p_i\,q^{-1}\big),
+  \qquad p_i \in \{0{,}9418,\ 0{,}9418,\ 0{,}8187,\ 0{,}2,\ 0{,}2\}.
 \end{equation}
+Sus coeficientes son los que devuelve \texttt{np.poly(polos\_lc)}.
 
 \subsection{Grados y causalidad}
 
@@ -323,8 +346,8 @@ general.
   \draw[->] (S) -| node[pos=0.95, left] {$-$} (s1);
 \end{tikzpicture}
 \caption{Estructura RST de dos grados de libertad: feedforward $T/R$,
-feedback $S/R$ y planta $B/A$. La ley $R u = T r - S y$ incluye el integrador
-$(1-q^{-1})$ en $R$.}
+feedback $S/R$ y planta $B/A$. La ley $R u = T r - S y$ incluye el factor
+$(1-q^{-1})$ en $R$, que introduce acción integral.}
 \label{fig:blk}
 \end{figure}
 
@@ -369,12 +392,12 @@ def solve_diophantine_sylvester(A_bar, B, Alc, deg_R, deg_S):
     return np.concatenate(([1.0], sol[:deg_R])), sol[deg_R:]
 \end{lstlisting}
 
-\begin{lstlisting}[caption={Diseno del regulador con integrador y sin cancelacion.}]
+\begin{lstlisting}[caption={Diseno del regulador con accion integral y sin cancelacion.}]
 def design_rst(theta_hat, polos_lc=POLOS_LC):
     a1, a2, b1, b2 = theta_hat
     A = np.array([1.0, a1, a2])
     B = np.array([0.0, b1, b2])
-    A_bar = np.convolve(A, [1.0, -1.0])    # integrador: A*(1 - q^-1)
+    A_bar = np.convolve(A, [1.0, -1.0])    # accion integral: A*(1 - q^-1)
     Alc = np.real(np.poly(polos_lc))       # A_lc deseado
     R_bar, S = solve_diophantine_sylvester(A_bar, B, Alc, deg_R=2, deg_S=2)
     R = np.convolve([1.0, -1.0], R_bar)
@@ -453,44 +476,67 @@ cerrado impuestos por el STR quedan dentro del círculo unitario.}
 \hfill
 \begin{subfigure}{0.49\textwidth}
   \includegraphics[width=\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_Pert_Sinusoidal.png}
-  \caption{Perturbación sinusoidal}
+  \caption{Perturbación sinusoidal (en la salida)}
 \end{subfigure}
 \\[0.5em]
 \begin{subfigure}{0.49\textwidth}
   \includegraphics[width=\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_Pert_Escalon.png}
-  \caption{Perturbación escalón ($t\in[6,8]$)}
+  \caption{Perturbación rectangular (pulso $t\in[6,8]$, en la salida)}
 \end{subfigure}
 \hfill
 \begin{subfigure}{0.49\textwidth}
   \includegraphics[width=\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_Ruido_Medicion.png}
-  \caption{Ruido de medición ($\sigma=0{,}005$)}
+  \caption{Ruido de medición ($\sigma=0{,}005$, sólo en $y_{\text{medida}}$)}
 \end{subfigure}
 \caption{Respuesta ($\theta$), acción de control ($u$), estimación RLS de
 $A(q),B(q)$ y coeficientes del regulador RST para los cuatro escenarios.}
 \label{fig:res}
 \end{figure}
 
+\paragraph{Puntos de inyección.} Las tres perturbaciones tienen transferencias
+distintas y se aplican en lugares distintos: la \emph{sinusoidal} y el
+\emph{pulso rectangular} se suman a la salida verdadera $\theta$ (perturbación de
+\emph{salida}, no de carga), mientras que el \emph{ruido} se agrega
+exclusivamente a la salida medida $y_{\text{medida}}$ (ruido de medición).
+
+El máximo de $|\theta|$ está dominado por la condición inicial ($0{,}1$~rad) y
+por eso aporta poca información. La Tabla~\ref{tab:met} usa métricas más
+representativas del efecto de las perturbaciones: el RMS y el máximo de $\theta$
+\emph{después} del transitorio ($t>5$~s), el tiempo de establecimiento
+($|\theta|<0{,}02$), el esfuerzo de control (RMS de $u$) y la dispersión de
+$s_0$ en la ventana final (indicador de convergencia del regulador). Se reportan
+para el modo robusto (el análisis básico vs.\ robusto está en la
+Sección~\ref{sec:robustez}).
+
 \begin{table}[H]
 \centering
-\caption{Resumen cuantitativo de la validación.}
-\begin{tabular}{@{}lccc@{}}
+\caption{Métricas de desempeño (modo robusto).}
+\label{tab:met}
+\begin{tabular}{@{}lccccc@{}}
 \toprule
-Escenario & $|\theta|_{\max}$ [rad] & $|u|_{\max}$ [N] & Estable \\
+Escenario & RMS$_\theta^{t>5}$ & $|\theta|_{\max}^{t>5}$ & $t_{\text{est}}$ [s]
+ & RMS$_u$ & std$(s_0)$ \\
 \midrule
-Sin perturbaciones     & 0{,}100 & 36{,}7 & Sí \\
-Perturbación sinusoidal & 0{,}100 & 36{,}7 & Sí \\
-Perturbación escalón   & 0{,}100 & 36{,}7 & Sí \\
-Ruido de medición      & 0{,}100 & 35{,}0 & Sí \\
+Sin perturbaciones      & $0{,}0000$ & $0{,}0000$ & $0{,}36$ & $1{,}27$ & $\approx 0$ \\
+Perturbación sinusoidal & $0{,}0134$ & $0{,}0189$ & $0{,}08$ & $1{,}38$ & $\approx 0$ \\
+Pulso rectangular       & $0{,}0062$ & $0{,}0344$ & $8{,}24$ & $1{,}33$ & $\approx 0$ \\
+Ruido de medición       & $0{,}0026$ & $0{,}0072$ & $0{,}36$ & $2{,}75$ & $\approx 0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-El integrador $(1-q^{-1})$ en $R$ garantiza error estacionario nulo y rechazo de
-la perturbación escalón: el factor $(1-q^{-1})$ cancela el polo en $z=1$ del
-escalón, por lo que su efecto permanente sobre la salida es cero.
+El factor $(1-q^{-1})$ en $R$ dota al lazo de \emph{acción integral}, lo que
+permite rechazar perturbaciones de tipo escalón. La perturbación de la
+Figura~\ref{fig:res}(c) es en rigor un \emph{pulso rectangular}
+(escalón de subida en $t=6$~s y de bajada en $t=8$~s): el $t_{\text{est}}$
+de $8{,}24$~s refleja el rechazo del flanco de subida y la recuperación tras el
+de bajada. Como el pulso desaparece antes de alcanzar necesariamente el régimen
+permanente, no se lo usa para afirmar ``error estacionario nulo''; esa propiedad
+se sigue de la acción integral ante una perturbación de escalón sostenida.
 
 % ==================================================================
 \section{Análisis de estabilidad y convergencia; robustez}
+\label{sec:robustez}
 % ==================================================================
 
 El ángulo $\theta$ permanece acotado en los cuatro escenarios, pero un análisis
@@ -516,31 +562,41 @@ el modelo \emph{estimado}. Cuando ese estimado se degrada, el regulador
 diseño ($t_0 = A_{lc}(1)/B(1)$ y la matriz de Sylvester): un error relativo en
 $b$ se amplifica enormemente en $R,S,T$. Concretamente:
 \begin{itemize}[nosep]
-  \item \textbf{Sinusoidal:} la perturbación (inyectada en la salida) hace que el
-  RLS reparta mal la ganancia; $b_1$ llega a cambiar de signo, el cero estimado
-  salta a $z\approx+1{,}7$ y $s_0$ crece $\sim4\times$ sin estabilizarse.
-  \item \textbf{Ruido:} el RLS adapta sobre el ruido (agravado por
-  \emph{covariance windup} con $\lambda<1$ y baja excitación); $a_1,a_2$ quedan
-  sesgados y $s_0$ fluctúa $\pm20\%$.
+  \item \textbf{Perturbación sinusoidal (en la salida).} Al sumarse a $\theta$,
+  la sinusoide contamina el regresor del RLS, que reparte mal la ganancia:
+  $b_1$ llega a cambiar de signo, el cero estimado salta a $z\approx+1{,}7$ y los
+  coeficientes de $S$ crecen \emph{monótonamente} ($s_1$ pasa de $\sim700$ a
+  $\sim3000$, Fig.~\ref{fig:cmpdet_sin}). El radio de polos de LC (evaluado sobre
+  el modelo nominal) trepa de $0{,}942$ a $0{,}989$: el lazo sigue estable pero
+  pierde margen de forma sostenida.
+  \item \textbf{Ruido de medición (sólo en $y_{\text{medida}}$).} El RLS adapta
+  sobre el ruido, agravado por \emph{covariance windup} ($\lambda<1$ con baja
+  excitación): $a_1,a_2$ quedan sesgados, $s_0$ fluctúa $\pm20\%$ y, en algunos
+  rediseños, el regulador instantáneo llega a colocar polos \emph{fuera} del
+  círculo unitario ($\max|z|>1$, Fig.~\ref{fig:cmpdet_rui}). El lazo sobrevive
+  por ser lentamente variable, pero el diseño es momentáneamente inestable.
 \end{itemize}
-Aun así el lazo se mantiene estable, pero los polos logrados \emph{sobre la
-planta real} se corren hacia el círculo unitario (Tabla~\ref{tab:conv}),
-perdiendo margen.
 
 \subsection{Mejoras de robustez}
 
-Se agrega una variante robusta (\texttt{robust=True}), comparable con la básica:
+Se agrega una variante robusta (\texttt{robust=True}), comparable con la básica.
+Cada mecanismo ataca una de las causas anteriores:
 \begin{itemize}[nosep]
-  \item \textbf{Regresor consistente} con la salida medida (errores-en-variables).
-  \item \textbf{Zona muerta} en el RLS: no se actualiza si $|\varepsilon|$ no
-  supera el error de ecuación esperado ($\sim\sigma\lVert[1,a_1,a_2]\rVert$),
-  evitando adaptar sobre ruido/perturbación puros.
-  \item \textbf{Anti \emph{windup} de covarianza}: se acota $\mathrm{tr}(P)$.
-  \item \textbf{Gate de rediseño} validado contra el \emph{prior nominal
-  confiable} (no contra la estimación ruidosa): se acepta un candidato solo si
-  $b_1{+}b_2$ conserva signo y magnitud, $|t_0|$ y $\lVert S\rVert$ son
-  razonables y el lazo cerrado resultante es estable. Además solo se rediseña
-  ante cambios significativos de $\hat\theta$ (congelamiento).
+  \item \textbf{Zona muerta} en el RLS (contra el ruido y la perturbación de
+  salida): no se actualiza si $|\varepsilon|$ no supera el error de ecuación
+  esperado ($\sim\sigma\lVert[1,a_1,a_2]\rVert$), evitando que el estimador
+  ``persiga'' señales que no son la dinámica de la planta.
+  \item \textbf{Anti \emph{windup} de covarianza} (contra el \emph{covariance
+  windup} del caso de ruido): se acota $\mathrm{tr}(P)$ para que la ganancia del
+  RLS no crezca sin límite bajo baja excitación.
+  \item \textbf{Gate de rediseño} (contra los diseños con $b$ mal estimado):
+  validado contra el \emph{prior nominal confiable} (no contra la estimación
+  ruidosa), acepta un candidato sólo si $b_1{+}b_2$ conserva signo y magnitud,
+  $|t_0|$ y $\lVert S\rVert$ son razonables y el lazo cerrado resultante es
+  estable. Además sólo se rediseña ante cambios significativos de $\hat\theta$
+  (congelamiento). \emph{Limitación:} el gate sólo garantiza estabilidad respecto
+  del \emph{prior nominal}; no puede asegurarla frente a una planta real
+  desconocida.
 \end{itemize}
 
 \begin{lstlisting}[caption={Gate de aceptación del regulador candidato (robusto).}]
@@ -558,12 +614,16 @@ def candidato_valido(R, S, t0, theta_hat, s_norm_max, cfg, plant_ref):
 
 La variante robusta hace converger $R,S,T$ y recupera exactamente los polos de
 diseño ($\max|z| = 0{,}9418$) en los cuatro escenarios, mientras la básica deriva
-(Tabla~\ref{tab:conv}, Figuras~\ref{fig:conv} y \ref{fig:cmp}).
+(Tabla~\ref{tab:conv}, Figuras~\ref{fig:conv}, \ref{fig:cmpdet_sin} y
+\ref{fig:cmpdet_rui}).
 
 \begin{table}[H]
 \centering
-\caption{Estabilidad (máx.\ módulo de polo de LC sobre la planta real con el
-regulador final) y convergencia (desvío de $s_0$ en la ventana final).}
+\caption{Máximo módulo de los polos de lazo cerrado \emph{evaluados sobre el
+modelo lineal nominal alrededor de $\theta=0$} (con el regulador final) y
+convergencia (desvío de $s_0$ en la ventana final). El gate del modo robusto
+sólo verifica estabilidad frente a este modelo nominal, no frente a la planta
+real desconocida.}
 \label{tab:conv}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
@@ -573,7 +633,7 @@ Escenario & $\max|z|$ & std$(s_0)$ & $\max|z|$ & std$(s_0)$ \\
 \midrule
 Sin perturbaciones      & 0{,}942 & $\approx 0$ & 0{,}942 & $0$ \\
 Perturbación sinusoidal & 0{,}989 & $190$       & 0{,}942 & $0$ \\
-Perturbación escalón    & 0{,}957 & $\approx 0$ & 0{,}942 & $0$ \\
+Pulso rectangular       & 0{,}957 & $\approx 0$ & 0{,}942 & $0$ \\
 Ruido de medición       & 0{,}995 & $126$       & 0{,}942 & $0$ \\
 \bottomrule
 \end{tabular}
@@ -588,13 +648,102 @@ robusto (azul, prácticamente nulo) converge en todos los escenarios; el básico
 \label{fig:conv}
 \end{figure}
 
+\paragraph{Sinusoidal (los dos casos que más cambian).} La
+Figura~\ref{fig:cmpdet_sin} detalla el caso sinusoidal. Es importante ser
+honestos: en régimen, el modo básico logra un RMS de $\theta$ \emph{menor}
+($0{,}0040$ vs $0{,}0134$), porque su ganancia $s_1$ crece sin límite y eso
+mejora el rechazo de la perturbación de salida a $0{,}5$~Hz. Sin embargo, ese
+mismo crecimiento es lo que aleja los polos hacia el círculo unitario
+($0{,}942\!\to\!0{,}989$) y hace que $R,S,T$ nunca converjan. El robusto
+sacrifica algo de rechazo del rizo a cambio de coeficientes convergidos y margen
+de estabilidad constante.
+
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_cmp_Ruido_Medicion.png}
-\caption{Ruido de medición: básico (rojo) vs robusto (azul). El regulador básico
-persigue el ruido ($s_0$, $t_0$ y $b_1{+}b_2$ oscilan); el robusto se estabiliza
-en el diseño nominal y además regula mejor a $\theta$.}
-\label{fig:cmp}
+\includegraphics[width=0.95\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_cmp_detalle_Pert_Sinusoidal.png}
+\caption{Perturbación sinusoidal: básico vs robusto. Arriba: $\theta$ en régimen
+(con RMS) y control $u$. Abajo: coeficientes de $S$ (básico en trazo punteado,
+diverge; robusto sólido, constante) y radio de polos de LC (el básico sube a
+$0{,}989$; el robusto se mantiene en $0{,}942$).}
+\label{fig:cmpdet_sin}
+\end{figure}
+
+\paragraph{Ruido de medición.} La Figura~\ref{fig:cmpdet_rui} detalla el caso de
+ruido, donde el robusto es netamente superior: el RMS de $\theta$ en régimen baja
+de $0{,}0165$ a $0{,}0026$ (unas $6\times$), el tiempo de establecimiento pasa de
+$\sim20$~s a $0{,}36$~s y el radio de polos deja de superar el círculo unitario.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_cmp_detalle_Ruido_Medicion.png}
+\caption{Ruido de medición: básico vs robusto. El regulador básico persigue el
+ruido ($S$ oscila y el radio de polos supera $|z|=1$ en varios instantes); el
+robusto se estabiliza en el diseño nominal y regula mucho mejor a $\theta$.}
+\label{fig:cmpdet_rui}
+\end{figure}
+
+\subsection{Demostración con planta distinta a priori}
+\label{sec:selftuning}
+
+En los cuatro escenarios anteriores el prior nominal coincide con la
+linealización de la planta, de modo que la variante robusta recupera y
+congela el regulador nominal. Eso muestra robustez del controlador
+nominal, pero no prueba por sí solo la capacidad de \emph{autoajuste}: para ello
+hace falta que la planta real difiera del prior.
+
+\paragraph{Caso 1: Carrito $50\%$ más pesado (cambia la ganancia).} Con
+$M_{\text{real}} = 1{,}5\,M_{\text{nominal}}$ y prior nominal, la ganancia real
+cambia de $b_1{+}b_2 \approx -5{,}9\times10^{-4}$ a $\approx -3{,}9\times10^{-4}$.
+Como sin excitación la tarea de regulación pierde persistencia, se inyecta una
+referencia cuadrada de pequeña amplitud (dither) y se reduce la zona muerta. Los
+resultados (Fig.~\ref{fig:selftuning}) confirman el autoajuste:
+\begin{enumerate}[nosep]
+  \item el RLS arranca del prior nominal \emph{incorrecto};
+  \item la ganancia estimada se desplaza hacia el modelo real
+  ($b_1{+}b_2:\ -5{,}9 \to -3{,}9\times10^{-4}$);
+  \item el RST se rediseña: $S$ pasa de $[-367,697,-331]$ (nominal) a
+  $\approx[-551,1048,-498]$, que coincide con el diseño calculado para la planta
+  real ($[-545,1037,-492]$);
+  \item el controlador final \textbf{difiere} del nominal y el lazo permanece
+  estable ($\max|z|<1$ sobre la planta real, $|\theta|_{\max}=0{,}10$).
+\end{enumerate}
+Es notable que en este caso $a_1,a_2$ \emph{no} se mueven. La razón es física:
+$a_2 \equiv 1$ es estructural (el producto de los polos discretos $e^{\pm wT_s}$
+del péndulo sin fricción es $1$), y $a_1 = -2\cosh(wT_s)$ depende de
+$A_\theta = 3g(M+m)/(l(4M+m))$, que es casi \textbf{insensible a la masa del
+carro} (numerador y denominador crecen ambos con $M$ y el cociente satura en
+$3g/4l$). La masa afecta esencialmente sólo la ganancia $B_\theta \propto 1/M$, es
+decir $b$. El RLS mueve exactamente lo que cambió.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_self_tuning.png}
+\caption{Autoajuste ante un carro $50\%$ más pesado. Estimados (línea continua)
+parten del prior nominal (punteado) y van hacia la planta real (guiones): $b$
+converge al real; $a_1$ (eje ampliado) casi no cambia porque la masa apenas
+afecta los polos. El regulador $S$ se rediseña hacia el diseño de la planta real.}
+\label{fig:selftuning}
+\end{figure}
+
+\paragraph{Caso 2: barra $10\%$ más larga (cambian los polos y la ganancia).}
+Para mostrar además el desplazamiento de los \emph{polos}, se alarga la barra un
+$10\%$ ($l_{\text{real}} = 1{,}1\,l$), lo que sí cambia $A_\theta$ y por lo tanto
+$a_1$ (de $-2{,}00632$ a $-2{,}00575$). Como $a_1$ multiplica a $y\approx 0$
+(péndulo regulado), está mucho peor excitado que $b$ (que multiplica a $u$,
+grande): para identificarlo hace falta \textbf{más excitación} (dither de mayor
+amplitud) y \textbf{menor zona muerta}. Con esos ajustes (Fig.~\ref{fig:selftuning_l})
+el $a_1$ estimado se desplaza claramente desde el nominal hacia el real
+($-2{,}00632 \to -2{,}00599$), $b$ converge al real y $S$ se rediseña a
+$\approx[-402,766,-364]$ (diseño de la planta real), con el lazo estable.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{presentacion_pid_pendulo/imagenes_pid_autotunning/str_self_tuning_l.png}
+\caption{Autoajuste ante una barra $10\%$ más larga. A diferencia del caso de
+masa, ahora \textbf{$a_1$ sí se mueve} (eje ampliado) desde el prior nominal
+hacia la planta real, junto con $b$; el regulador $S$ converge al diseño de la
+planta real.}
+\label{fig:selftuning_l}
 \end{figure}
 
 \subsection{Suite de validación}
@@ -610,7 +759,13 @@ tests pasan):
   \texttt{test\_robusto\_mejora\_convergencia}: $R,S,T$ convergen en robusto y
   mejoran respecto del básico en sinusoidal/ruido.
   \item \texttt{test\_convergencia\_RLS\_robusto}: $\hat\theta$ cercano al modelo
-  real.
+  real cuando el prior coincide con la planta.
+  \item \texttt{test\_autoajuste\_planta\_distinta}: con la planta $50\%$ más
+  pesada, la ganancia estimada converge al modelo \emph{real} (no al prior), el
+  $S$ final difiere del nominal y el lazo es estable sobre la planta real.
+  \item \texttt{test\_autoajuste\_longitud\_mueve\_a1}: con la barra $10\%$ más
+  larga, el $a_1$ estimado se desplaza desde el nominal hacia el real y el lazo
+  permanece estable.
 \end{itemize}
 
 % ==================================================================
@@ -623,8 +778,7 @@ tests pasan):
   Por eso el RLS arranca desde el \emph{prior} nominal y se congela la
   actualización con baja excitación: así el \emph{certainty equivalence} se
   mantiene bien condicionado y estable. Iniciar el estimador desde un prior
-  neutro provocó, en pruebas, deriva de parámetros y divergencia, en línea con
-  las advertencias de \texttt{ICA\_STR.pdf}.
+  neutro provocó, en pruebas, deriva de parámetros y divergencia.
   \item \textbf{No cancelación de ceros.} El cero en $z\approx-1$ es no de fase
   mínima; cancelarlo produciría \emph{ringing}. La colocación de polos sin
   cancelación evita este problema.
@@ -639,23 +793,27 @@ tests pasan):
 \section{Conclusiones}
 % ==================================================================
 
-Se implementó y validó un Self-Tuning Regulator adaptativo indirecto,
-enteramente en tiempo discreto, que estabiliza el péndulo invertido inestable.
-El método combina estimación RLS on-line, resolución de la ecuación Diofantina
-por matriz de Sylvester (con integrador y sin cancelar el cero no de fase
-mínima) y la ley de control RST. La validación muestra estabilización desde la
-condición inicial, convergencia de los parámetros estimados a los valores reales
-y rechazo de perturbaciones de carga y ruido de medición, cumpliendo con la
-definición de \emph{self-tuning}: el regulador converge al que se hubiese
-diseñado conociendo la planta.
+Se implementó un STR indirecto en tiempo discreto que estabiliza la dinámica
+angular del péndulo invertido. El método combina estimación RLS on-line,
+resolución de la ecuación Diofantina por matriz de Sylvester (con acción integral
+y sin cancelar el cero no de fase mínima) y la ley de control RST. El diseño
+nominal reproduce exactamente los polos deseados y la variante robusta mantiene
+el desempeño acotado ante perturbaciones y ruido de medición, con mejoras claras
+en el caso de ruido (RMS de $\theta$ unas $6\times$ menor y margen de estabilidad
+preservado).
+
+Debido a la pérdida de persistencia de excitación en la tarea de regulación y al
+uso de un prior nominal próximo a la planta, los cuatro escenarios principales
+demuestran sobre todo \textbf{estabilidad y robustez}. La \emph{capacidad de
+autoajuste} propiamente dicha se validó por separado (Sección~\ref{sec:selftuning}):
+con una planta $50\%$ más pesada y excitación persistente, el RLS se desplaza
+desde el prior nominal hacia el modelo real, el RST se rediseña a un controlador
+\emph{distinto} del nominal y el lazo permanece estable, cumpliendo la definición
+de \emph{self-tuning}. En un escenario con incertidumbre paramétrica mayor, el
+autoajuste requeriría relajar el gate de rediseño (que hoy sólo garantiza
+estabilidad frente al prior) e introducir excitación explícita.
 
 Como material adicional se generan animaciones (\texttt{.mp4}) de cada escenario
 en \texttt{saved\_runs\_pid\_autotunning/}.
-
-% ==================================================================
-\begin{thebibliography}{9}
-\bibitem{str} P. González, \emph{Identificación y Control Adaptativo: STR},
-FIUBA, 2025 (\texttt{ICA\_STR.pdf}).
-\end{thebibliography}
 
 \end{document}

@@ -15,8 +15,8 @@ Ejecutable con pytest (`pytest -q test_str_pendulo.py`) o directamente
 import numpy as np
 
 from respuesta_pid_pendulo_autotunning import (
-    THETA_NOMINAL, POLOS_LC, Ts,
-    design_rst, closed_loop_poles, simulate_closed_loop_str,
+    THETA_NOMINAL, POLOS_LC, Ts, M, m, l, ROBUST_DEFAULTS,
+    design_rst, closed_loop_poles, simulate_closed_loop_str, arx_from_params,
 )
 
 SEED = 12345
@@ -129,6 +129,68 @@ def test_convergencia_RLS_robusto():
 
 
 # ----------------------------------------------------------------------
+# 6. Autoajuste real ante una planta DISTINTA del prior nominal
+# ----------------------------------------------------------------------
+def test_autoajuste_planta_distinta():
+    """Con la planta 50% más pesada, el RLS (robusto, con excitación) debe
+    desplazar la ganancia estimada desde el prior nominal hacia el modelo real,
+    el RST final debe diferir del nominal y el lazo permanecer estable."""
+    plant_real = (1.5 * M, m, l)
+    theta_true = arx_from_params(*plant_real)
+    cfg_demo = dict(ROBUST_DEFAULTS, dz_floor=1e-4, dz_factor=0.0,
+                    redesign_rel_tol=0.005)
+    ref_exc = lambda t: 0.05 * np.sign(np.sin(2 * np.pi * 1.0 * t))
+    res = simulate_closed_loop_str(
+        t_total=T_SIM, ref_func=ref_exc, initial_theta=INITIAL_THETA,
+        robust=True, seed=7, plant_params=plant_real, cfg=cfg_demo)
+    t, y, u, ref, theta_hist, rst_hist, _ = res
+    b_est = theta_hist[-1, 2] + theta_hist[-1, 3]
+    b_true = theta_true[2] + theta_true[3]
+    b_nom = THETA_NOMINAL[2] + THETA_NOMINAL[3]
+    # el estimado se acerca al real y se aleja del nominal
+    assert abs(b_est - b_true) < 0.3 * abs(b_true), \
+        f"b_est={b_est:.2e} no converge a b_true={b_true:.2e}"
+    assert abs(b_est - b_true) < abs(b_nom - b_true), \
+        "el estimado no se acercó al real más que el prior nominal"
+    # el regulador final difiere claramente del nominal
+    _, S_nom, _ = design_rst(THETA_NOMINAL)
+    S_fin = rst_hist[-1, 3:6]
+    assert np.linalg.norm(S_fin - S_nom) > 0.2 * np.linalg.norm(S_nom), \
+        "el RST final no difiere del nominal (no hubo autoajuste)"
+    # estable sobre la planta real
+    R_fin = np.concatenate(([1.0], rst_hist[-1, 0:3]))
+    assert np.max(np.abs(closed_loop_poles(theta_true, R_fin, S_fin))) < 1.0
+    assert np.max(np.abs(y)) <= 0.12
+
+
+def test_autoajuste_longitud_mueve_a1():
+    """Con la barra 10% más larga cambia también el polo del péndulo (a1). Con
+    excitación fuerte y zona muerta baja, el a1 estimado debe desplazarse desde
+    el prior nominal hacia el valor real, y el lazo permanecer estable."""
+    plant_real = (M, m, 1.10 * l)
+    theta_true = arx_from_params(*plant_real)
+    cfg_demo = dict(ROBUST_DEFAULTS, dz_floor=1e-6, dz_factor=0.0,
+                    redesign_rel_tol=0.003)
+    ref_exc = lambda t: 0.2 * np.sign(np.sin(2 * np.pi * 1.0 * t))
+    res = simulate_closed_loop_str(
+        t_total=T_SIM, ref_func=ref_exc, initial_theta=INITIAL_THETA,
+        robust=True, seed=7, plant_params=plant_real, cfg=cfg_demo, lambda_=0.99)
+    t, y, u, ref, theta_hist, rst_hist, _ = res
+    a1_est = theta_hist[-1, 0]
+    # a1 se movió desde el nominal en la dirección correcta (hacia el real)
+    assert abs(a1_est - theta_true[0]) < abs(THETA_NOMINAL[0] - theta_true[0]), \
+        f"a1_est={a1_est:.6f} no se acercó al real {theta_true[0]:.6f}"
+    assert abs(a1_est - THETA_NOMINAL[0]) > 1e-4, "a1 no se movió del nominal"
+    # b converge al real y lazo estable
+    b_est = theta_hist[-1, 2] + theta_hist[-1, 3]
+    assert abs(b_est - (theta_true[2] + theta_true[3])) < 0.3 * abs(theta_true[2] + theta_true[3])
+    R_fin = np.concatenate(([1.0], rst_hist[-1, 0:3]))
+    S_fin = rst_hist[-1, 3:6]
+    assert np.max(np.abs(closed_loop_poles(theta_true, R_fin, S_fin))) < 1.0
+    assert np.max(np.abs(y)) <= 0.22
+
+
+# ----------------------------------------------------------------------
 def _resumen():
     print(f"{'Escenario':<20}{'modo':<9}{'|th|max':>9}{'max|polo|':>11}"
           f"{'std(s0)':>11}{'std(t0)':>11}")
@@ -147,7 +209,8 @@ if __name__ == "__main__":
     fallas = 0
     for fn in [test_diophantine_nominal, test_estabilidad_lazo, test_theta_acotado,
                test_convergencia_RST_robusto, test_robusto_mejora_convergencia,
-               test_convergencia_RLS_robusto]:
+               test_convergencia_RLS_robusto, test_autoajuste_planta_distinta,
+               test_autoajuste_longitud_mueve_a1]:
         try:
             fn()
             print(f"[PASS] {fn.__name__}")

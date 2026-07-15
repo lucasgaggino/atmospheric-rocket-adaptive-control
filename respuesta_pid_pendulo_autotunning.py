@@ -12,11 +12,14 @@ import pandas as pd
 # Metodología (según ICA_STR.pdf):
 #   1. RLS estima A(q), B(q) del modelo ARX en línea.
 #   2. Se resuelve la ec. Diofantina (identidad de Bézout) A·R + B·S = A_lc
-#      vía matriz de Sylvester, incluyendo un integrador en R (rechazo de
-#      perturbación escalón) y SIN cancelar ceros (el cero está cerca de z=-1).
+#      vía matriz de Sylvester, incluyendo el factor 1 - q^-1 en R (acción
+#      integral, para rechazo de perturbación de tipo escalón) y SIN cancelar
+#      ceros (el cero está cerca de z=-1).
 #   3. Se aplica la ley de control RST discreta: R(q)u = T(q)r - S(q)y.
 #
-# En NINGÚN punto del diseño del regulador se pasa a tiempo continuo.
+# La planta nominal se discretiza UNA sola vez por ZOH analítico; de ahí en más
+# la identificación y el diseño del regulador son íntegramente discretos, sin
+# transformar el controlador a tiempo continuo (p.ej. por Tustin).
 # ==============================================================================
 
 output_dir = "presentacion_pid_pendulo/imagenes_pid_autotunning"
@@ -86,14 +89,22 @@ ROBUST_DEFAULTS = dict(
 # MODELO NO LINEAL DEL PÉNDULO (planta "real" a controlar)
 # ==============================================================================
 
-def cartpole_ode(t, y, F_control):
-    """EDOs no lineales del cartpole. Estado: y = [x, xdot, theta, thetadot]."""
+def cartpole_ode(t, y, F_control, M_=M, m_=m, l_=l):
+    """EDOs no lineales del cartpole. Estado: y = [x, xdot, theta, thetadot].
+
+    Se integran los CUATRO estados aunque el control solo use theta: el término
+    4/3 proviene del momento de inercia de una barra uniforme y l es la distancia
+    del pivote al centro de masa (media longitud de la barra).
+
+    Los parámetros de la planta (M_, m_, l_) pueden diferir de los nominales
+    (M, m, l) para demostrar el autoajuste ante una planta distinta del prior.
+    """
     x, xdot, th, thdot = y
     s, c = math.sin(th), math.cos(th)
-    temp = (F_control + m * l * thdot * thdot * s) / (M + m)
-    denom = l * (4.0 / 3.0 - (m * c * c) / (M + m))
+    temp = (F_control + m_ * l_ * thdot * thdot * s) / (M_ + m_)
+    denom = l_ * (4.0 / 3.0 - (m_ * c * c) / (M_ + m_))
     thddot = (g * s - c * temp) / denom
-    xddot = temp - (m * l * thddot * c) / (M + m)
+    xddot = temp - (m_ * l_ * thddot * c) / (M_ + m_)
     return [xdot, xddot, thdot, thddot]
 
 
@@ -150,20 +161,24 @@ def solve_diophantine_sylvester(A_bar, B, Alc, deg_R, deg_S):
 
 
 def design_rst(theta_hat, polos_lc=POLOS_LC):
-    """Diseño del regulador RST discreto por colocación de polos, con integrador
-    y sin cancelación de ceros.
+    """Diseño del regulador RST discreto por colocación de polos, con acción
+    integral y sin cancelación de ceros.
 
     theta_hat = [a1, a2, b1, b2] (parámetros ARX estimados).
     Devuelve (R, S, t0) con:
-        R = (1 - q^-1) * R_bar   (grado 3, incorpora el integrador)
+        R = (1 - q^-1) * R_bar   (grado 3; el factor 1 - q^-1 da acción integral)
         S = s0 + s1 q^-1 + s2 q^-2
         T = t0                   (ganancia estática unitaria)
+
+    Nota de notación: 1 - q^-1 es el operador DIFERENCIA; el integrador discreto
+    es 1/(1 - q^-1). Al incluir 1 - q^-1 en R, al despejar u aparece su inversa y
+    la ley de control adquiere acción integral.
     """
     a1, a2, b1, b2 = theta_hat
     A = np.array([1.0, a1, a2])       # A(q^-1)
     B = np.array([0.0, b1, b2])       # B(q^-1) = b1 q^-1 + b2 q^-2
 
-    # Integrador: se diseña sobre A_bar = A * (1 - q^-1)  (grado 3)
+    # Acción integral: se diseña sobre A_bar = A * (1 - q^-1)  (grado 3)
     A_bar = np.convolve(A, [1.0, -1.0])
 
     # Polinomio característico deseado A_lc(q^-1) (grado 5)
@@ -172,7 +187,7 @@ def design_rst(theta_hat, polos_lc=POLOS_LC):
     # Controlador de mínimo orden: deg(S) = deg(A_bar) - 1 = 2, deg(R_bar) = 2
     R_bar, S = solve_diophantine_sylvester(A_bar, B, Alc, deg_R=2, deg_S=2)
 
-    # R final incorpora el integrador
+    # R final incluye el factor 1 - q^-1 (acción integral)
     R = np.convolve([1.0, -1.0], R_bar)  # grado 3
 
     # Feedforward para ganancia estática unitaria: y/r|_{q^-1=1} = B(1)T/Alc(1) = 1
@@ -311,7 +326,7 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
                              disturbance_func=None, measurement_noise=0.0,
                              warmup_k=100, redesign_every=25, lambda_=0.995,
                              excite_thresh=1e-4, robust=False, seed=None,
-                             cfg=ROBUST_DEFAULTS):
+                             cfg=ROBUST_DEFAULTS, plant_params=None):
     """Simula el péndulo no lineal en lazo cerrado con un STR adaptativo indirecto.
 
     - Arranque: regulador RST diseñado con el modelo ARX nominal (prior).
@@ -319,13 +334,26 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
     - Tras el warmup y cada `redesign_every` pasos: se rediseña el RST resolviendo
       la ec. Diofantina con la estimación actual (certainty equivalence).
 
+    Puntos de inyección (importante: tienen transferencias distintas):
+      - disturbance_func: se SUMA a la salida verdadera theta (perturbación de
+        SALIDA), no a la entrada u.
+      - measurement_noise: se suma SOLO a la salida medida (ruido de medición).
+
+    plant_params = (M_, m_, l_): parámetros FÍSICOS de la planta a integrar. Si
+    difieren de los nominales, el prior del STR es incorrecto y se puede observar
+    el autoajuste (RLS desplaza theta_hat hacia el modelo real y el RST se
+    rediseña). Por defecto usa los nominales.
+
     Modo `robust=True` (mejoras para que R,S,T converjan con ruido/perturbación):
-      - regresor consistente con la salida medida (errores-en-variables);
-      - RLS con zona muerta (relativa al ruido) y anti covariance-windup;
+      - regresor construido usando consistentemente la salida medida (esto NO
+        resuelve el problema de errores-en-variables; puede sesgar el RLS);
+      - RLS con zona muerta (relativa al error de ecuación) y anti windup de
+        covarianza;
       - gate de rediseño (candidato_valido) + rediseño sólo ante cambios
         significativos de theta, para no perseguir el ruido.
     """
     rng = np.random.default_rng(seed)
+    Mp, mp, lp = plant_params if plant_params is not None else (M, m, l)
 
     N = int(t_total / Ts)
     t_sim = np.arange(N) * Ts
@@ -428,13 +456,13 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
         # --- Integración del modelo no lineal (ZOH sobre u) ---
         if k < N - 1:
             def ode(t, ys):
-                return cartpole_ode(t, ys, u_control)
+                return cartpole_ode(t, ys, u_control, Mp, mp, lp)
             sol = solve_ivp(ode, [t_sim[k], t_sim[k + 1]], y_full[:, k],
                             t_eval=[t_sim[k + 1]], method='RK45', rtol=1e-6,
                             max_step=Ts)
             if sol.success:
                 y_full[:, k + 1] = sol.y[:, -1]
-                if disturbance_func:
+                if disturbance_func:  # perturbación de SALIDA (se suma a theta)
                     y_full[2, k + 1] += disturbance_func(t_sim[k + 1])
             else:
                 y_full[:, k + 1] = y_full[:, k]
@@ -636,6 +664,208 @@ def save_run_data(filename, t, y, u, ref, theta_hist, rst_hist):
 
 
 # ==============================================================================
+# MÉTRICAS Y UTILIDADES DE ANÁLISIS
+# ==============================================================================
+
+def arx_from_params(Mp, mp, lp):
+    """Modelo ARX discreto (ZOH analítico) de la linealización para parámetros
+    físicos arbitrarios. Sirve como 'verdad' cuando la planta difiere del prior."""
+    A_th = 3.0 * g * (Mp + mp) / (lp * (4.0 * Mp + mp))
+    B_th = -3.0 / (lp * (4.0 * Mp + mp))
+    w = math.sqrt(A_th)
+    ch = math.cosh(w * Ts)
+    b = B_th * (ch - 1.0) / A_th
+    return np.array([-2.0 * ch, 1.0, b, b])
+
+
+def pole_radius_series(rst_hist, plant=THETA_NOMINAL):
+    """Máx. módulo de los polos de LC (sobre `plant`) del regulador en cada k."""
+    out = np.zeros(len(rst_hist))
+    for k in range(len(rst_hist)):
+        R = np.concatenate(([1.0], rst_hist[k, 0:3]))
+        S = rst_hist[k, 3:6]
+        out[k] = np.max(np.abs(closed_loop_poles(plant, R, S)))
+    return out
+
+
+def compute_metrics(t, y, u, theta_hist, rst_hist, theta_ref=THETA_NOMINAL,
+                    t_post=5.0, win=200, tol=0.02):
+    """Métricas informativas más allá del máximo (dominado por la CI):
+    RMS y máx de theta para t>t_post, RMS de u, tiempo de establecimiento,
+    error paramétrico final ||theta_hat - theta_ref||, y dispersión de s0/t0."""
+    mask = t >= t_post
+    rms_theta = float(np.sqrt(np.mean(y[mask] ** 2))) if mask.any() else float('nan')
+    max_theta_post = float(np.max(np.abs(y[mask]))) if mask.any() else float('nan')
+    rms_u = float(np.sqrt(np.mean(u ** 2)))
+    idx = np.where(np.abs(y) > tol)[0]
+    settling = float(t[idx[-1]]) if len(idx) > 0 else 0.0
+    param_err = float(np.linalg.norm(theta_hist[-1] - theta_ref))
+    s0_std = float(np.std(rst_hist[-win:, 3]))
+    t0_std = float(np.std(rst_hist[-win:, 6]))
+    R_fin = np.concatenate(([1.0], rst_hist[-1, 0:3]))
+    S_fin = rst_hist[-1, 3:6]
+    maxpole = float(np.max(np.abs(closed_loop_poles(THETA_NOMINAL, R_fin, S_fin))))
+    return dict(rms_theta=rms_theta, max_theta_post=max_theta_post, rms_u=rms_u,
+                settling=settling, param_err=param_err, s0_std=s0_std,
+                t0_std=t0_std, maxpole=maxpole)
+
+
+def plot_comparacion_detalle(nombre, res_b, res_r):
+    """Comparación detallada básico vs robusto para los escenarios que más
+    cambian (sinusoidal y ruido): theta en régimen, control, coeficientes de S y
+    la evolución del radio de polos de LC (margen de estabilidad)."""
+    tb, yb, ub, _, _, rstb, _ = res_b
+    tr, yr, ur, _, _, rstr, _ = res_r
+    mb = pole_radius_series(rstb)
+    mr = pole_radius_series(rstr)
+    rms_b = np.sqrt(np.mean(yb[tb >= 5.0] ** 2))
+    rms_r = np.sqrt(np.mean(yr[tr >= 5.0] ** 2))
+
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.plot(tb, yb, 'r-', lw=1.0, label=f'básico (RMS$_{{t>5}}$={rms_b:.4f})')
+    plt.plot(tr, yr, 'b-', lw=1.0, label=f'robusto (RMS$_{{t>5}}$={rms_r:.4f})')
+    plt.axhline(0, color='k', lw=0.5)
+    plt.xlim(5, tb[-1])
+    plt.ylabel('Theta [rad]'); plt.title(f'{nombre} - Theta en régimen (t>5 s)')
+    plt.grid(True); plt.legend(loc='upper right', fontsize='small')
+
+    plt.subplot(2, 2, 2)
+    plt.plot(tb, ub, 'r-', lw=0.8, label='u básico')
+    plt.plot(tr, ur, 'b-', lw=0.8, label='u robusto')
+    plt.ylabel('u'); plt.title('Acción de control'); plt.grid(True)
+    plt.legend(loc='best', fontsize='small')
+
+    plt.subplot(2, 2, 3)
+    for i, lab in zip(range(3), ['$s_0$', '$s_1$', '$s_2$']):
+        plt.plot(tb, rstb[:, 3 + i], '--', lw=1.0, color=f'C{i}',
+                 label=f'{lab} básico')
+        plt.plot(tr, rstr[:, 3 + i], '-', lw=1.2, color=f'C{i}',
+                 label=f'{lab} robusto')
+    plt.ylabel('Coef. de $S$'); plt.xlabel('t [s]')
+    plt.title('Coeficientes de $S(q)$'); plt.grid(True)
+    plt.legend(loc='best', fontsize='x-small', ncol=3)
+
+    plt.subplot(2, 2, 4)
+    plt.plot(tb, mb, 'r-', lw=1.2, label='básico')
+    plt.plot(tr, mr, 'b-', lw=1.2, label='robusto')
+    plt.axhline(1.0, color='k', ls=':', lw=1.0, label='|z|=1 (límite)')
+    plt.ylabel('máx |polo de LC|'); plt.xlabel('t [s]')
+    plt.title('Radio de polos de LC (modelo nominal)'); plt.grid(True)
+    plt.legend(loc='best', fontsize='small')
+
+    plt.tight_layout()
+    os.makedirs(output_dir, exist_ok=True)
+    fname = os.path.join(output_dir, f'str_cmp_detalle_{nombre}.png')
+    plt.savefig(fname, dpi=300, bbox_inches='tight')
+    print(f"Gráfico guardado en {fname}")
+    plt.close()
+
+
+def _zoom_ylim(series_list, refs, t, skip_frac=0.2, pad_frac=0.2):
+    """Límites de eje ampliados alrededor de la parte post-transitorio de las
+    series y de las líneas de referencia (nominal/real), ignorando el arranque."""
+    i0 = int(len(t) * skip_frac)
+    vals = [s[i0:] for s in series_list]
+    lo = min([float(np.min(v)) for v in vals] + [float(r) for r in refs])
+    hi = max([float(np.max(v)) for v in vals] + [float(r) for r in refs])
+    pad = pad_frac * (hi - lo) + 1e-6
+    return lo - pad, hi + pad
+
+
+def plot_self_tuning(res, theta_true, R_nom, S_nom, R_true, S_true, titulo,
+                     fname='str_self_tuning.png'):
+    """Demostración de autoajuste ante una planta DISTINTA del prior nominal:
+    el RLS parte del prior incorrecto y se desplaza hacia el modelo real; el RST
+    se rediseña y el controlador final difiere del nominal.
+
+    Nota: $a_2 \\equiv 1$ es estructural (producto de los polos discretos del
+    péndulo sin fricción), por eso se grafica sólo $a_1$ con eje ampliado."""
+    t, y, u, ref, theta_hist, rst_hist, redesign_k = res
+    tr = t[redesign_k] if redesign_k is not None else None
+
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.plot(t, y, 'b-', lw=1.0, label='theta')
+    plt.plot(t, ref, 'k--', lw=0.8, label='Ref (excitación)')
+    plt.ylabel('Theta [rad]'); plt.title(f'{titulo} - Respuesta')
+    plt.grid(True); plt.legend(loc='upper right', fontsize='small')
+
+    # --- a1 (a2 es estructuralmente 1): eje ampliado para ver el movimiento ---
+    plt.subplot(2, 2, 2)
+    plt.plot(t, theta_hist[:, 0], color='C0', lw=1.4, label='$a_1$ estim.')
+    plt.axhline(THETA_NOMINAL[0], color='C0', ls=':', lw=1.0, label='$a_1$ nominal')
+    plt.axhline(theta_true[0], color='C0', ls='--', lw=1.2, label='$a_1$ real')
+    plt.ylim(*_zoom_ylim([theta_hist[:, 0]], [THETA_NOMINAL[0], theta_true[0]], t))
+    plt.ylabel('$a_1$'); plt.xlabel('t [s]')
+    plt.title('RLS: $a_1$ (eje ampliado; $a_2\\equiv 1$ estructural)')
+    plt.grid(True); plt.legend(loc='best', fontsize='small')
+
+    # --- b1 y b2 (b1 = b2): estim. + nominal + real para AMBOS ---
+    plt.subplot(2, 2, 3)
+    plt.plot(t, theta_hist[:, 2], 'y-', lw=1.6, label='$b_1$ estim.')
+    plt.plot(t, theta_hist[:, 3], 'k-', lw=1.0, label='$b_2$ estim.')
+    plt.axhline(theta_true[2], color='y', ls='--', lw=1.2, label='$b_1$ real')
+    plt.axhline(THETA_NOMINAL[2], color='y', ls=':', lw=1.0, label='$b_1$ nominal')
+    plt.axhline(theta_true[3], color='k', ls='--', lw=1.2, label='$b_2$ real')
+    plt.axhline(THETA_NOMINAL[3], color='k', ls=':', lw=1.0, label='$b_2$ nominal')
+    plt.ylim(*_zoom_ylim([theta_hist[:, 2], theta_hist[:, 3]],
+                         [theta_true[2], theta_true[3],
+                          THETA_NOMINAL[2], THETA_NOMINAL[3]], t))
+    plt.ylabel('$b_i$'); plt.xlabel('t [s]')
+    plt.title('RLS: numerador ($b_1=b_2$)'); plt.grid(True)
+    plt.legend(loc='best', fontsize='x-small', ncol=3)
+
+    plt.subplot(2, 2, 4)
+    for i, lab in zip(range(3), ['$s_0$', '$s_1$', '$s_2$']):
+        line, = plt.plot(t, rst_hist[:, 3 + i], lw=1.2, label=lab)
+        plt.axhline(S_nom[i], color=line.get_color(), ls=':', lw=0.8)
+        plt.axhline(S_true[i], color=line.get_color(), ls='--', lw=1.0)
+    if tr is not None:
+        plt.axvline(x=tr, color='m', ls=':', lw=0.8, label='1er rediseño')
+    plt.ylabel('Coef. de $S$'); plt.xlabel('t [s]')
+    plt.title('RST: actual (—), nominal (··), diseño p/planta real (- -)')
+    plt.grid(True); plt.legend(loc='best', fontsize='x-small', ncol=2)
+
+    plt.tight_layout()
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, fname)
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    print(f"Gráfico guardado en {path}")
+    plt.close()
+
+
+def run_self_tuning(plant_params, titulo, fname, amp, dz_floor, lambda_=0.995,
+                    initial_theta=0.1, t_sim=20.0, seed=7):
+    """Corre y grafica una demo de autoajuste con la planta `plant_params`
+    (distinta del prior nominal). Se excita con una referencia cuadrada (dither)
+    para dar persistencia de excitación; sin ruido, la zona muerta se baja."""
+    theta_true = arx_from_params(*plant_params)
+    Rn, Sn, _ = design_rst(THETA_NOMINAL)
+    Rt, St, _ = design_rst(theta_true)
+    cfg = dict(ROBUST_DEFAULTS, dz_floor=dz_floor, dz_factor=0.0,
+               redesign_rel_tol=0.003)
+    ref_exc = lambda t: amp * np.sign(np.sin(2 * np.pi * 1.0 * t))
+    res = simulate_closed_loop_str(
+        t_total=t_sim, ref_func=ref_exc, initial_theta=initial_theta,
+        robust=True, seed=seed, plant_params=plant_params, cfg=cfg,
+        lambda_=lambda_)
+    th_f = res[4][-1]
+    S_f = res[5][-1, 3:6]
+    print(f"\n--- {titulo} ---")
+    print(f"ARX nominal (prior) = {np.round(THETA_NOMINAL, 6)}")
+    print(f"ARX planta real     = {np.round(theta_true, 6)}")
+    print(f"ARX estimado final  = {np.round(th_f, 6)}")
+    print(f"S nominal = {np.round(Sn, 1)}  S real = {np.round(St, 1)}"
+          f"  S final = {np.round(S_f, 1)}")
+    print(f"|theta|_max = {np.max(np.abs(res[1])):.4f}")
+    plot_self_tuning(res, theta_true, Rn, Sn, Rt, St, titulo, fname=fname)
+    return res, theta_true
+
+
+# ==============================================================================
 # PROGRAMA PRINCIPAL
 # ==============================================================================
 
@@ -670,9 +900,9 @@ def main():
 
     std_basico, std_robusto = [], []
 
-    print(f"{'Escenario':<20}{'modo':<9}{'|th|max':>9}{'max|polo|':>11}"
-          f"{'std(s0)fin':>12}{'estable':>9}")
-    print("-" * 70)
+    print(f"{'Escenario':<18}{'modo':<8}{'RMSth>5':>9}{'|th|>5':>8}"
+          f"{'test[s]':>8}{'RMSu':>8}{'errPar':>9}{'std(s0)':>10}{'max|z|':>8}{'est':>5}")
+    print("-" * 91)
 
     for nombre, kwargs in escenarios:
         res_b = simulate_closed_loop_str(
@@ -690,21 +920,38 @@ def main():
             plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, title, key=key)
             save_run_data(f'{nombre.lower()}_{modo}.csv', t, y, u, ref, theta_hist, rst_hist)
 
-            # métricas de validación: polos de LC del regulador FINAL aplicado a
-            # la planta de referencia (nominal ~ real), que es lo relevante.
-            R_fin = np.concatenate(([1.0], rst_hist[-1, 0:3]))
-            S_fin = rst_hist[-1, 3:6]
-            poles = closed_loop_poles(THETA_NOMINAL, R_fin, S_fin)
-            maxpole = np.max(np.abs(poles))
-            s0_std = np.std(rst_hist[-WIN:, 3])
-            (std_basico if modo == "basico" else std_robusto).append(s0_std)
-            print(f"{nombre:<20}{modo:<9}{np.max(np.abs(y)):>9.4f}{maxpole:>11.4f}"
-                  f"{s0_std:>12.3e}{('sí' if maxpole < 1 else 'NO'):>9}")
+            met = compute_metrics(t, y, u, theta_hist, rst_hist, win=WIN)
+            (std_basico if modo == "basico" else std_robusto).append(met["s0_std"])
+            print(f"{nombre:<19} {modo:<8}{met['rms_theta']:>9.4f}{met['max_theta_post']:>8.4f}"
+                  f"{met['settling']:>8.2f}{met['rms_u']:>8.2f}{met['param_err']:>9.4f}"
+                  f"{met['s0_std']:>10.2e}{met['maxpole']:>8.4f}"
+                  f"{('sí' if met['maxpole'] < 1 else 'NO'):>5}")
 
         plot_comparacion(nombre, res_b, res_r)
+        if nombre in ("Pert_Sinusoidal", "Ruido_Medicion"):
+            plot_comparacion_detalle(nombre, res_b, res_r)
         print()
 
     plot_convergencia([n for n, _ in escenarios], std_basico, std_robusto)
+
+    # ------------------------------------------------------------------
+    # DEMOSTRACIONES DE AUTOAJUSTE: planta DISTINTA del prior nominal
+    # ------------------------------------------------------------------
+    print("\n=== DEMOS DE AUTOAJUSTE (planta != prior) ===")
+    # (1) Carro 50% más pesado: cambia sobre todo la ganancia b (a queda igual).
+    res_m, _ = run_self_tuning(
+        (1.5 * M, m, l), "Autoajuste: carro 50% más pesado (cambia b)",
+        'str_self_tuning.png', amp=0.05, dz_floor=1e-4, lambda_=0.995,
+        t_sim=T_SIM)
+    save_run_data('self_tuning.csv', *res_m[:6])
+    # (2) Barra 10% más larga: mueve además el polo (a1) del péndulo. Requiere
+    #     más excitación y menor zona muerta porque a1 (que multiplica a y ~0)
+    #     está peor excitado que b (que multiplica a u, mucho mayor).
+    res_l, _ = run_self_tuning(
+        (M, m, 1.10 * l), "Autoajuste: barra 10% más larga (cambian a1 y b)",
+        'str_self_tuning_l.png', amp=0.2, dz_floor=1e-6, lambda_=0.99,
+        t_sim=T_SIM)
+    save_run_data('self_tuning_l.csv', *res_l[:6])
 
 
 if __name__ == "__main__":
