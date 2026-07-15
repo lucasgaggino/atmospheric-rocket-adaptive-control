@@ -66,6 +66,21 @@ THETA_NOMINAL = _modelo_arx_nominal()
 _POLOS_CONT = np.array([-3.0, -3.0, -10.0])
 POLOS_LC = np.concatenate((np.exp(_POLOS_CONT * Ts), [0.2, 0.2]))
 
+# Parámetros de la variante ROBUSTA del STR (ver simulate_closed_loop_str).
+# La zona muerta se dimensiona al error de ecuación (el ruido de salida aparece
+# amplificado por A(q): su desvío ~ sigma*||[1,a1,a2]|| ~ 2.4 sigma), por eso
+# dz_factor ~ 10 equivale a ~4 sigma del error de ecuación.
+ROBUST_DEFAULTS = dict(
+    dz_factor=10.0,       # zona muerta = max(dz_factor*sigma_ruido, dz_floor)
+    dz_floor=1.0e-2,      # piso de zona muerta (bloquea perturbación de salida)
+    p_max=1.0e3,          # cota de trace(P) (anti covariance-windup)
+    b_min=2.0e-4,         # |b1+b2| mínimo aceptable (|nominal| ~ 5.85e-4)
+    t0_max=3.0,           # |t0| máximo aceptable (nominal ~ 0.67)
+    s_norm_factor=2.0,    # ||S|| máx = s_norm_factor * ||S_nominal||
+    redesign_rel_tol=0.02,  # cambio relativo mínimo de theta para rediseñar
+    pole_margin=1e-4,     # exige max|polo LC estimado| < 1 - pole_margin
+)
+
 
 # ==============================================================================
 # MODELO NO LINEAL DEL PÉNDULO (planta "real" a controlar)
@@ -167,6 +182,59 @@ def design_rst(theta_hat, polos_lc=POLOS_LC):
     return R, S, t0
 
 
+def closed_loop_poles(theta_plant, R, S):
+    """Polos de lazo cerrado (plano z) al aplicar el regulador (R, S) a la planta
+    ARX theta_plant = [a1, a2, b1, b2].
+
+    El polinomio característico es A(q)R(q) + B(q)S(q). Devuelve sus raíces; el
+    lazo es estable si todas tienen módulo < 1. Se usa tanto para validar el
+    diseño (debe reproducir A_lc con el modelo nominal) como para medir el
+    corrimiento de polos cuando el regulador se diseña con un modelo degradado.
+    """
+    a1, a2, b1, b2 = theta_plant
+    A = np.array([1.0, a1, a2])
+    B = np.array([0.0, b1, b2])
+    la = np.convolve(A, R)
+    lb = np.convolve(B, S)
+    n = max(len(la), len(lb))
+    cl = np.zeros(n)
+    cl[:len(la)] += la
+    cl[:len(lb)] += lb
+    return np.roots(cl)
+
+
+def candidato_valido(R, S, t0, theta_hat, s_norm_max, cfg=ROBUST_DEFAULTS,
+                     plant_ref=None):
+    """Gate de aceptación de un regulador candidato (modo robusto).
+
+    Rechaza diseños provenientes de estimaciones degradadas:
+      - b1+b2 con signo equivocado o magnitud demasiado chica (b va al
+        denominador del diseño: amplifica el error);
+      - |t0| o ||S|| desproporcionados respecto del nominal;
+      - lazo cerrado INESTABLE evaluado sobre la planta de referencia CONFIABLE
+        (el prior nominal), no sobre la estimación corrupta: así se garantiza
+        que el candidato estabiliza una planta cercana a la real antes de
+        aplicarlo. Validar contra el propio estimado ruidoso podía aceptar
+        reguladores que en realidad desestabilizan.
+    """
+    if plant_ref is None:
+        plant_ref = THETA_NOMINAL
+    if not (np.all(np.isfinite(R)) and np.all(np.isfinite(S)) and np.isfinite(t0)):
+        return False
+    b1, b2 = theta_hat[2], theta_hat[3]
+    bsum = b1 + b2
+    if bsum >= 0.0 or abs(bsum) < cfg["b_min"]:   # nominal: bsum < 0
+        return False
+    if abs(t0) > cfg["t0_max"]:
+        return False
+    if np.linalg.norm(S) > s_norm_max:
+        return False
+    poles = closed_loop_poles(plant_ref, R, S)
+    if np.max(np.abs(poles)) > 1.0 - cfg["pole_margin"]:
+        return False
+    return True
+
+
 # ==============================================================================
 # 2. CONTROLADOR RST Y ESTIMADOR RLS
 # ==============================================================================
@@ -209,16 +277,30 @@ class RSTController:
         return u
 
 
-def rls_step(theta, P, phi, y_meas, lambda_=0.995):
-    """Un paso de mínimos cuadrados recursivos (RLS) con factor de olvido."""
+def rls_step(theta, P, phi, y_meas, lambda_=0.995, dead_zone=0.0, p_max=None):
+    """Un paso de mínimos cuadrados recursivos (RLS) con factor de olvido.
+
+    Extensiones robustas (desactivadas por defecto -> modo básico idéntico):
+      - dead_zone: si |err| <= dead_zone no se actualiza (evita adaptar sobre
+        ruido/perturbación puros). Devuelve updated=False.
+      - p_max: cota superior de trace(P) para frenar el *covariance windup*
+        (con λ<1 y baja excitación la covarianza crece sin límite y provoca
+        estallidos en la estimación).
+    """
     y_pred = phi @ theta
     err = y_meas - y_pred
+    if dead_zone > 0.0 and abs(err) <= dead_zone:
+        return theta, P, err, False
     Pphi = P @ phi
     denom = lambda_ + phi @ Pphi
     K = Pphi / denom
     theta = theta + K * err
     P = (P - np.outer(K, Pphi)) / lambda_
-    return theta, P, err
+    if p_max is not None:
+        tr = np.trace(P)
+        if tr > p_max:
+            P = P * (p_max / tr)
+    return theta, P, err, True
 
 
 # ==============================================================================
@@ -228,14 +310,23 @@ def rls_step(theta, P, phi, y_meas, lambda_=0.995):
 def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
                              disturbance_func=None, measurement_noise=0.0,
                              warmup_k=100, redesign_every=25, lambda_=0.995,
-                             excite_thresh=1e-4):
+                             excite_thresh=1e-4, robust=False, seed=None,
+                             cfg=ROBUST_DEFAULTS):
     """Simula el péndulo no lineal en lazo cerrado con un STR adaptativo indirecto.
 
     - Arranque: regulador RST diseñado con el modelo ARX nominal (prior).
     - En cada paso: RLS actualiza [a1, a2, b1, b2].
     - Tras el warmup y cada `redesign_every` pasos: se rediseña el RST resolviendo
       la ec. Diofantina con la estimación actual (certainty equivalence).
+
+    Modo `robust=True` (mejoras para que R,S,T converjan con ruido/perturbación):
+      - regresor consistente con la salida medida (errores-en-variables);
+      - RLS con zona muerta (relativa al ruido) y anti covariance-windup;
+      - gate de rediseño (candidato_valido) + rediseño sólo ante cambios
+        significativos de theta, para no perseguir el ruido.
     """
+    rng = np.random.default_rng(seed)
+
     N = int(t_total / Ts)
     t_sim = np.arange(N) * Ts
 
@@ -243,7 +334,8 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
     y_full = np.zeros((4, N))
     y_full[2, 0] = initial_theta
 
-    y = np.zeros(N)     # salida (theta)
+    y = np.zeros(N)     # salida (theta) verdadera
+    ym = np.zeros(N)    # salida medida (con ruido)
     u = np.zeros(N)     # acción de control
     ref = np.zeros(N)   # referencia
     y[0] = initial_theta
@@ -252,6 +344,7 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
     #     estabilidad desde t=0 (la planta es inestable a lazo abierto) ---
     R0, S0, t00 = design_rst(THETA_NOMINAL)
     ctrl_rst = RSTController(R0, S0, t00)
+    s_norm_max = cfg["s_norm_factor"] * np.linalg.norm(S0)
 
     # --- Estimador RLS: arranca en el prior nominal. La planta se estabiliza
     #     rápido y la excitación se desvanece (persistencia de excitación, ver
@@ -259,6 +352,11 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
     #     condicionado y el certainty-equivalence estable. ---
     theta_hat = THETA_NOMINAL.copy()
     P = 100.0 * np.eye(4)
+
+    # Parámetros del modo robusto
+    dead_zone = max(cfg["dz_factor"] * measurement_noise, cfg["dz_floor"]) if robust else 0.0
+    p_max = cfg["p_max"] if robust else None
+    last_design_theta = None
 
     # Historiales para graficar
     theta_est_hist = np.zeros((N, 4))          # [a1, a2, b1, b2]
@@ -270,22 +368,43 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
         rst_hist[k] = np.concatenate((ctrl_rst.R[1:4], ctrl_rst.S[:3], [ctrl_rst.t0]))
 
         ref[k] = ref_func(t_sim[k])
-        y_measured = y[k] + (np.random.normal(0, measurement_noise)
+        y_measured = y[k] + (rng.normal(0, measurement_noise)
                              if measurement_noise > 0.0 else 0.0)
+        ym[k] = y_measured
 
         # --- RLS: y[k] = -a1 y[k-1] - a2 y[k-2] + b1 u[k-1] + b2 u[k-2] ---
+        # Modo robusto: regresor con la salida MEDIDA (consistente con el
+        # target). Modo básico: regresor con la salida limpia (comportamiento
+        # original, se conserva para comparación).
         if k >= 2:
-            phi = np.array([-y[k - 1], -y[k - 2], u[k - 1], u[k - 2]])
+            if robust:
+                phi = np.array([-ym[k - 1], -ym[k - 2], u[k - 1], u[k - 2]])
+            else:
+                phi = np.array([-y[k - 1], -y[k - 2], u[k - 1], u[k - 2]])
             if np.linalg.norm(phi) > excite_thresh:  # freno por baja excitación
-                theta_hat, P, _ = rls_step(theta_hat, P, phi, y_measured, lambda_)
+                theta_hat, P, _, _ = rls_step(theta_hat, P, phi, y_measured,
+                                              lambda_, dead_zone=dead_zone,
+                                              p_max=p_max)
 
         # --- Rediseño periódico del RST (certainty equivalence) ---
-        if k >= warmup_k and (k - warmup_k) % redesign_every == 0:
+        do_redesign = k >= warmup_k and (k - warmup_k) % redesign_every == 0
+        if do_redesign and robust and last_design_theta is not None:
+            rel = (np.linalg.norm(theta_hat - last_design_theta)
+                   / (np.linalg.norm(last_design_theta) + 1e-12))
+            if rel < cfg["redesign_rel_tol"]:   # theta casi sin cambios -> congelar
+                do_redesign = False
+        if do_redesign:
             try:
                 R_new, S_new, t0_new = design_rst(theta_hat)
-                if np.all(np.isfinite(R_new)) and np.all(np.isfinite(S_new)) \
-                        and abs(t0_new) < 1e6:
+                if robust:
+                    ok = candidato_valido(R_new, S_new, t0_new, theta_hat,
+                                          s_norm_max, cfg)
+                else:
+                    ok = (np.all(np.isfinite(R_new)) and np.all(np.isfinite(S_new))
+                          and abs(t0_new) < 1e6)
+                if ok:
                     ctrl_rst.set_params(R_new, S_new, t0_new)
+                    last_design_theta = theta_hat.copy()
                     if redesign_k is None:
                         redesign_k = k
             except np.linalg.LinAlgError:
@@ -328,7 +447,8 @@ def simulate_closed_loop_str(t_total, ref_func, initial_theta=0.1,
 # 4. GRÁFICOS Y GUARDADO
 # ==============================================================================
 
-def plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, title):
+def plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, title, key=None):
+    key = key if key is not None else title
     tr = t[redesign_k] if redesign_k is not None else None
 
     plt.figure(figsize=(12, 8))
@@ -382,7 +502,119 @@ def plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, title):
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    fname = os.path.join(output_dir, f'str_{title}.png')
+    fname = os.path.join(output_dir, f'str_{key}.png')
+    plt.savefig(fname, dpi=300, bbox_inches='tight')
+    print(f"Gráfico guardado en {fname}")
+    plt.close()
+
+
+def plot_comparacion(nombre, res_basico, res_robusto):
+    """Superpone las trayectorias del STR básico vs robusto para un escenario:
+    respuesta theta, coeficiente s0 (representativo de la ganancia del
+    regulador), t0 y el parámetro b1+b2 (numerador, que va al denominador del
+    diseño). Deja en evidencia la convergencia del modo robusto."""
+    tb, yb, _, _, thb, rstb, _ = res_basico
+    tr, yr, _, _, thr, rstr, _ = res_robusto
+
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.plot(tb, yb, 'r-', lw=1.0, label='básico')
+    plt.plot(tr, yr, 'b-', lw=1.0, label='robusto')
+    plt.axhline(0, color='k', lw=0.5)
+    plt.ylabel('Theta [rad]'); plt.title(f'{nombre} - Respuesta'); plt.grid(True)
+    plt.legend(loc='upper right', fontsize='small')
+
+    plt.subplot(2, 2, 2)
+    plt.plot(tb, rstb[:, 3], 'r-', lw=1.0, label='$s_0$ básico')
+    plt.plot(tr, rstr[:, 3], 'b-', lw=1.0, label='$s_0$ robusto')
+    plt.ylabel('$s_0$'); plt.title('Coeficiente $s_0$ del regulador'); plt.grid(True)
+    plt.legend(loc='best', fontsize='small')
+
+    plt.subplot(2, 2, 3)
+    plt.plot(tb, rstb[:, 6], 'r-', lw=1.0, label='$t_0$ básico')
+    plt.plot(tr, rstr[:, 6], 'b-', lw=1.0, label='$t_0$ robusto')
+    plt.ylabel('$t_0$'); plt.xlabel('t [s]'); plt.title('Prealimentación $t_0$')
+    plt.grid(True); plt.legend(loc='best', fontsize='small')
+
+    plt.subplot(2, 2, 4)
+    plt.plot(tb, thb[:, 2] + thb[:, 3], 'r-', lw=1.0, label='$b_1+b_2$ básico')
+    plt.plot(tr, thr[:, 2] + thr[:, 3], 'b-', lw=1.0, label='$b_1+b_2$ robusto')
+    b_nom = THETA_NOMINAL[2] + THETA_NOMINAL[3]
+    plt.axhline(b_nom, color='k', ls='--', lw=0.8, label='nominal')
+    plt.ylabel('$b_1+b_2$'); plt.xlabel('t [s]')
+    plt.title('Numerador estimado (va al denominador del diseño)')
+    plt.grid(True); plt.legend(loc='best', fontsize='small')
+
+    plt.tight_layout()
+    os.makedirs(output_dir, exist_ok=True)
+    fname = os.path.join(output_dir, f'str_cmp_{nombre}.png')
+    plt.savefig(fname, dpi=300, bbox_inches='tight')
+    print(f"Gráfico guardado en {fname}")
+    plt.close()
+
+
+def plot_convergencia(nombres, std_basico, std_robusto):
+    """Barras del desvío estándar de s0 en la ventana final (últimos ~4 s) por
+    escenario, básico vs robusto. Métrica directa de convergencia del RST."""
+    x = np.arange(len(nombres))
+    w = 0.38
+    floor = 1e-14  # piso para poder representar std=0 en escala logarítmica
+    sb = np.maximum(np.asarray(std_basico), floor)
+    sr = np.maximum(np.asarray(std_robusto), floor)
+    plt.figure(figsize=(9, 5))
+    plt.bar(x - w / 2, sb, w, label='básico', color='tab:red')
+    plt.bar(x + w / 2, sr, w, label='robusto', color='tab:blue')
+    plt.yscale('log')
+    plt.ylim(floor / 2, max(sb.max(), 1.0) * 3)
+    plt.xticks(x, nombres, rotation=15, ha='right')
+    plt.ylabel('std($s_0$) ventana final (log)')
+    plt.title('Convergencia del regulador RST: básico vs robusto')
+    plt.grid(True, axis='y', alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    os.makedirs(output_dir, exist_ok=True)
+    fname = os.path.join(output_dir, 'str_convergencia.png')
+    plt.savefig(fname, dpi=300, bbox_inches='tight')
+    print(f"Gráfico guardado en {fname}")
+    plt.close()
+
+
+def plot_polos_ceros(theta=THETA_NOMINAL, polos_lc=POLOS_LC):
+    """Mapa de polos y ceros DISCRETO (plano z).
+
+    - Lazo abierto: polos del ARX nominal A(z) = z^2 + a1 z + a2 (uno inestable,
+      |z|>1) y el cero de B(z) = b1 z + b2 (en z = -b2/b1 ~ -1, no fase mínima).
+    - Lazo cerrado: polos deseados (POLOS_LC), todos dentro del círculo unitario.
+    Todo el cálculo es discreto; no interviene el tiempo continuo.
+    """
+    a1, a2, b1, b2 = theta
+    polos_la = np.roots([1.0, a1, a2])          # polos de A(z)
+    ceros_la = np.roots([b1, b2]) if abs(b1) > 1e-12 else np.array([])
+
+    ang = np.linspace(0, 2 * np.pi, 400)
+    plt.figure(figsize=(7, 7))
+    plt.plot(np.cos(ang), np.sin(ang), 'k--', alpha=0.6, label='|z| = 1')
+
+    plt.plot(np.real(polos_la), np.imag(polos_la), 'rx', ms=13, mew=2.5,
+             label='Polos LA (planta inestable)')
+    if len(ceros_la) > 0:
+        plt.plot(np.real(ceros_la), np.imag(ceros_la), 'bo', ms=11,
+                 mfc='none', mew=2, label='Cero LA (z$\\approx$-1)')
+    plt.plot(np.real(polos_lc), np.imag(polos_lc), 'g^', ms=11,
+             label='Polos LC deseados ($A_{lc}$)')
+
+    plt.axhline(0, color='gray', lw=0.6)
+    plt.axvline(0, color='gray', lw=0.6)
+    plt.gca().set_aspect('equal', 'box')
+    plt.xlabel('Re(z)')
+    plt.ylabel('Im(z)')
+    plt.title('Mapa de polos y ceros discreto\nLazo abierto (inestable) vs polos de lazo cerrado (STR)')
+    plt.grid(True, alpha=0.3)
+    plt.legend(loc='upper left', fontsize='small')
+    plt.tight_layout()
+    os.makedirs(output_dir, exist_ok=True)
+    fname = os.path.join(output_dir, 'str_polos_ceros.png')
     plt.savefig(fname, dpi=300, bbox_inches='tight')
     print(f"Gráfico guardado en {fname}")
     plt.close()
@@ -421,8 +653,13 @@ def main():
     print(f"                   S = {np.round(S0, 4)}")
     print(f"                   t0 = {t00:.4f}\n")
 
+    # Mapa de polos y ceros discreto (lazo abierto vs lazo cerrado deseado)
+    plot_polos_ceros()
+
     T_SIM = 20.0
     INITIAL_THETA = 0.1
+    SEED = 12345
+    WIN = 200   # ventana final (~4 s) para medir convergencia
 
     escenarios = [
         ("Sin_Perturbaciones", dict()),
@@ -431,17 +668,43 @@ def main():
         ("Ruido_Medicion", dict(measurement_noise=0.005)),
     ]
 
+    std_basico, std_robusto = [], []
+
+    print(f"{'Escenario':<20}{'modo':<9}{'|th|max':>9}{'max|polo|':>11}"
+          f"{'std(s0)fin':>12}{'estable':>9}")
+    print("-" * 70)
+
     for nombre, kwargs in escenarios:
-        print(f"--- Escenario: {nombre} ---")
-        res = simulate_closed_loop_str(
-            t_total=T_SIM, ref_func=lambda t: 0.0,
-            initial_theta=INITIAL_THETA, **kwargs
-        )
-        t, y, u, ref, theta_hist, rst_hist, redesign_k = res
-        plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, nombre)
-        save_run_data(f'{nombre.lower()}.csv', t, y, u, ref, theta_hist, rst_hist)
-        print(f"theta final estimado = {np.round(theta_hist[-1], 5)}")
-        print(f"|theta|_max = {np.max(np.abs(y)):.5f} rad,  |u|_max = {np.max(np.abs(u)):.2f}\n")
+        res_b = simulate_closed_loop_str(
+            t_total=T_SIM, ref_func=lambda t: 0.0, initial_theta=INITIAL_THETA,
+            robust=False, seed=SEED, **kwargs)
+        res_r = simulate_closed_loop_str(
+            t_total=T_SIM, ref_func=lambda t: 0.0, initial_theta=INITIAL_THETA,
+            robust=True, seed=SEED, **kwargs)
+
+        for modo, res, key, title in [
+            ("basico", res_b, nombre, nombre),
+            ("robusto", res_r, f"robusto_{nombre}", f"{nombre} (robusto)"),
+        ]:
+            t, y, u, ref, theta_hist, rst_hist, redesign_k = res
+            plot_sim_results(t, y, u, ref, theta_hist, rst_hist, redesign_k, title, key=key)
+            save_run_data(f'{nombre.lower()}_{modo}.csv', t, y, u, ref, theta_hist, rst_hist)
+
+            # métricas de validación: polos de LC del regulador FINAL aplicado a
+            # la planta de referencia (nominal ~ real), que es lo relevante.
+            R_fin = np.concatenate(([1.0], rst_hist[-1, 0:3]))
+            S_fin = rst_hist[-1, 3:6]
+            poles = closed_loop_poles(THETA_NOMINAL, R_fin, S_fin)
+            maxpole = np.max(np.abs(poles))
+            s0_std = np.std(rst_hist[-WIN:, 3])
+            (std_basico if modo == "basico" else std_robusto).append(s0_std)
+            print(f"{nombre:<20}{modo:<9}{np.max(np.abs(y)):>9.4f}{maxpole:>11.4f}"
+                  f"{s0_std:>12.3e}{('sí' if maxpole < 1 else 'NO'):>9}")
+
+        plot_comparacion(nombre, res_b, res_r)
+        print()
+
+    plot_convergencia([n for n, _ in escenarios], std_basico, std_robusto)
 
 
 if __name__ == "__main__":
