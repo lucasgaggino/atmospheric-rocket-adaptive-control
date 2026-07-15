@@ -847,7 +847,7 @@ def run_self_tuning(plant_params, titulo, fname, amp, dz_floor, lambda_=0.995,
     Rt, St, _ = design_rst(theta_true)
     cfg = dict(ROBUST_DEFAULTS, dz_floor=dz_floor, dz_factor=0.0,
                redesign_rel_tol=0.003)
-    ref_exc = lambda t: amp * np.sign(np.sin(2 * np.pi * 1.0 * t))
+    ref_exc = lambda t: amp * np.sign(np.sin(2 *5* np.pi * 1.0 * t))
     res = simulate_closed_loop_str(
         t_total=t_sim, ref_func=ref_exc, initial_theta=initial_theta,
         robust=True, seed=seed, plant_params=plant_params, cfg=cfg,

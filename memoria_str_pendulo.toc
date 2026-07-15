@@ -1,0 +1,40 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Introducción}{2}{section.0.1}%
+\contentsline {section}{\numberline {2}Marco Teórico: el Self-Tuning Regulator}{2}{section.0.2}%
+\contentsline {subsection}{\numberline {2.1}Control adaptativo y self-tuning}{2}{subsection.0.2.1}%
+\contentsline {subsection}{\numberline {2.2}Modelo de la planta y ley de control RST}{2}{subsection.0.2.2}%
+\contentsline {subsection}{\numberline {2.3}Diseño por colocación de polos y ecuación Diofantina}{2}{subsection.0.2.3}%
+\contentsline {subsection}{\numberline {2.4}Rechazo de perturbaciones}{3}{subsection.0.2.4}%
+\contentsline {subsection}{\numberline {2.5}Estimación recursiva (RLS con olvido)}{3}{subsection.0.2.5}%
+\contentsline {subsection}{\numberline {2.6}Algoritmo indirecto}{3}{subsection.0.2.6}%
+\contentsline {section}{\numberline {3}Sistema: el Péndulo Invertido}{3}{section.0.3}%
+\contentsline {subsection}{\numberline {3.1}Modelo no lineal}{3}{subsection.0.3.1}%
+\contentsline {subsection}{\numberline {3.2}Linealización}{4}{subsection.0.3.2}%
+\contentsline {subsection}{\numberline {3.3}Discretización ZOH analítica y modelo ARX}{4}{subsection.0.3.3}%
+\contentsline {paragraph}{Observaciones de diseño.}{4}{section*.2}%
+\contentsline {section}{\numberline {4}Diseño del Regulador STR (paso a paso)}{4}{section.0.4}%
+\contentsline {subsection}{\numberline {4.1}Estructura elegida}{4}{subsection.0.4.1}%
+\contentsline {subsection}{\numberline {4.2}Elección de los polos de lazo cerrado}{4}{subsection.0.4.2}%
+\contentsline {subsection}{\numberline {4.3}Grados y causalidad}{5}{subsection.0.4.3}%
+\contentsline {subsection}{\numberline {4.4}Resolución de la ecuación Diofantina (matriz de Sylvester)}{5}{subsection.0.4.4}%
+\contentsline {subsection}{\numberline {4.5}Prealimentación (ganancia estática unitaria)}{5}{subsection.0.4.5}%
+\contentsline {subsection}{\numberline {4.6}Diagrama de bloques}{5}{subsection.0.4.6}%
+\contentsline {section}{\numberline {5}Implementación}{5}{section.0.5}%
+\contentsline {subsection}{\numberline {5.1}Estimador RLS}{6}{subsection.0.5.1}%
+\contentsline {subsection}{\numberline {5.2}Ecuacion Diofantina (Sylvester) y diseno RST}{6}{subsection.0.5.2}%
+\contentsline {subsection}{\numberline {5.3}Controlador RST}{6}{subsection.0.5.3}%
+\contentsline {subsection}{\numberline {5.4}Bucle adaptativo}{6}{subsection.0.5.4}%
+\contentsline {section}{\numberline {6}Resultados y Validación}{7}{section.0.6}%
+\contentsline {paragraph}{Puntos de inyección.}{9}{section*.6}%
+\contentsline {section}{\numberline {7}Análisis de estabilidad y convergencia; robustez}{10}{section.0.7}%
+\contentsline {subsection}{\numberline {7.1}Verificación del diseño}{10}{subsection.0.7.1}%
+\contentsline {subsection}{\numberline {7.2}Por qué el regulador no converge (modo básico)}{10}{subsection.0.7.2}%
+\contentsline {subsection}{\numberline {7.3}Mejoras de robustez}{10}{subsection.0.7.3}%
+\contentsline {subsection}{\numberline {7.4}Resultados comparativos}{11}{subsection.0.7.4}%
+\contentsline {paragraph}{Sinusoidal (los dos casos que más cambian).}{11}{section*.10}%
+\contentsline {paragraph}{Ruido de medición.}{12}{section*.12}%
+\contentsline {subsection}{\numberline {7.5}Demostración con planta distinta a priori}{13}{subsection.0.7.5}%
+\contentsline {paragraph}{Caso 1: Carrito $50\%$ más pesado (cambia la ganancia).}{13}{section*.14}%
+\contentsline {paragraph}{Caso 2: barra $10\%$ más larga (cambian los polos y la ganancia).}{14}{section*.16}%
+\contentsline {subsection}{\numberline {7.6}Suite de validación}{15}{subsection.0.7.6}%
+\contentsline {section}{\numberline {8}Conclusiones}{15}{section.0.8}%

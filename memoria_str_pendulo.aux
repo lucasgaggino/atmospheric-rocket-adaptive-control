@@ -1,0 +1,79 @@
+\relax 
+\providecommand\babel@aux[2]{}
+\@nameuse{bbl@beforestart}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\babel@aux{spanish}{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introducción}{2}{section.0.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Marco Teórico: el Self-Tuning Regulator}{2}{section.0.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Control adaptativo y self-tuning}{2}{subsection.0.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Modelo de la planta y ley de control RST}{2}{subsection.0.2.2}\protected@file@percent }
+\newlabel{eq:rst}{{2}{2}{Modelo de la planta y ley de control RST}{equation.0.2.2}{}}
+\newlabel{eq:lc}{{3}{2}{Modelo de la planta y ley de control RST}{equation.0.2.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Diseño por colocación de polos y ecuación Diofantina}{2}{subsection.0.2.3}\protected@file@percent }
+\newlabel{eq:diof}{{4}{2}{Diseño por colocación de polos y ecuación Diofantina}{equation.0.2.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Rechazo de perturbaciones}{3}{subsection.0.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Estimación recursiva (RLS con olvido)}{3}{subsection.0.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}Algoritmo indirecto}{3}{subsection.0.2.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Sistema: el Péndulo Invertido}{3}{section.0.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Modelo no lineal}{3}{subsection.0.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Linealización}{4}{subsection.0.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Discretización ZOH analítica y modelo ARX}{4}{subsection.0.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Observaciones de diseño.}{4}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Diseño del Regulador STR (paso a paso)}{4}{section.0.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Estructura elegida}{4}{subsection.0.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Elección de los polos de lazo cerrado}{4}{subsection.0.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Grados y causalidad}{5}{subsection.0.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Resolución de la ecuación Diofantina (matriz de Sylvester)}{5}{subsection.0.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Prealimentación (ganancia estática unitaria)}{5}{subsection.0.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Diagrama de bloques}{5}{subsection.0.4.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Estructura RST de dos grados de libertad: feedforward $T/R$, feedback $S/R$ y planta $B/A$. La ley $R u = T r - S y$ incluye el factor $(1-q^{-1})$ en $R$, que introduce acción integral.}}{5}{figure.caption.3}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:blk}{{1}{5}{Estructura RST de dos grados de libertad: feedforward $T/R$, feedback $S/R$ y planta $B/A$. La ley $R u = T r - S y$ incluye el factor $(1-q^{-1})$ en $R$, que introduce acción integral}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Implementación}{5}{section.0.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Estimador RLS}{6}{subsection.0.5.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}{\ignorespaces Un paso de RLS con olvido.}}{6}{lstlisting.0.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Ecuacion Diofantina (Sylvester) y diseno RST}{6}{subsection.0.5.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}{\ignorespaces Armado de la matriz de Sylvester y resolucion.}}{6}{lstlisting.0.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}{\ignorespaces Diseno del regulador con accion integral y sin cancelacion.}}{6}{lstlisting.0.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Controlador RST}{6}{subsection.0.5.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}{\ignorespaces Ley recursiva R u = T r - S y.}}{6}{lstlisting.0.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Bucle adaptativo}{6}{subsection.0.5.4}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}{\ignorespaces Nucleo del bucle de simulacion.}}{7}{lstlisting.0.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Resultados y Validación}{7}{section.0.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Mapa de polos y ceros discreto. El polo de lazo abierto fuera del círculo unitario (planta inestable) y el cero en $z\approx -1$; los polos de lazo cerrado impuestos por el STR quedan dentro del círculo unitario.}}{8}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:pz}{{2}{8}{Mapa de polos y ceros discreto. El polo de lazo abierto fuera del círculo unitario (planta inestable) y el cero en $z\approx -1$; los polos de lazo cerrado impuestos por el STR quedan dentro del círculo unitario}{figure.caption.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Respuesta ($\theta $), acción de control ($u$), estimación RLS de $A(q),B(q)$ y coeficientes del regulador RST para los cuatro escenarios.}}{9}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:res}{{3}{9}{Respuesta ($\theta $), acción de control ($u$), estimación RLS de $A(q),B(q)$ y coeficientes del regulador RST para los cuatro escenarios}{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Puntos de inyección.}{9}{section*.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Métricas de desempeño (modo robusto).}}{9}{table.caption.7}\protected@file@percent }
+\newlabel{tab:met}{{1}{9}{Métricas de desempeño (modo robusto)}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Análisis de estabilidad y convergencia; robustez}{10}{section.0.7}\protected@file@percent }
+\newlabel{sec:robustez}{{7}{10}{Análisis de estabilidad y convergencia; robustez}{section.0.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Verificación del diseño}{10}{subsection.0.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Por qué el regulador no converge (modo básico)}{10}{subsection.0.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Mejoras de robustez}{10}{subsection.0.7.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6}{\ignorespaces Gate de aceptación del regulador candidato (robusto).}}{11}{lstlisting.0.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Resultados comparativos}{11}{subsection.0.7.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Máximo módulo de los polos de lazo cerrado \emph  {evaluados sobre el modelo lineal nominal alrededor de $\theta =0$} (con el regulador final) y convergencia (desvío de $s_0$ en la ventana final). El gate del modo robusto sólo verifica estabilidad frente a este modelo nominal, no frente a la planta real desconocida.}}{11}{table.caption.8}\protected@file@percent }
+\newlabel{tab:conv}{{2}{11}{Máximo módulo de los polos de lazo cerrado \emph {evaluados sobre el modelo lineal nominal alrededor de $\theta =0$} (con el regulador final) y convergencia (desvío de $s_0$ en la ventana final). El gate del modo robusto sólo verifica estabilidad frente a este modelo nominal, no frente a la planta real desconocida}{table.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Desvío estándar de $s_0$ en la ventana final (escala log). El modo robusto (azul, prácticamente nulo) converge en todos los escenarios; el básico (rojo) no converge con perturbación sinusoidal ni con ruido.}}{11}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:conv}{{4}{11}{Desvío estándar de $s_0$ en la ventana final (escala log). El modo robusto (azul, prácticamente nulo) converge en todos los escenarios; el básico (rojo) no converge con perturbación sinusoidal ni con ruido}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {paragraph}{Sinusoidal (los dos casos que más cambian).}{11}{section*.10}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Perturbación sinusoidal: básico vs robusto. Arriba: $\theta $ en régimen (con RMS) y control $u$. Abajo: coeficientes de $S$ (básico en trazo punteado, diverge; robusto sólido, constante) y radio de polos de LC (el básico sube a $0{,}989$; el robusto se mantiene en $0{,}942$).}}{12}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:cmpdet_sin}{{5}{12}{Perturbación sinusoidal: básico vs robusto. Arriba: $\theta $ en régimen (con RMS) y control $u$. Abajo: coeficientes de $S$ (básico en trazo punteado, diverge; robusto sólido, constante) y radio de polos de LC (el básico sube a $0{,}989$; el robusto se mantiene en $0{,}942$)}{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {paragraph}{Ruido de medición.}{12}{section*.12}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Ruido de medición: básico vs robusto. El regulador básico persigue el ruido ($S$ oscila y el radio de polos supera $|z|=1$ en varios instantes); el robusto se estabiliza en el diseño nominal y regula mucho mejor a $\theta $.}}{13}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:cmpdet_rui}{{6}{13}{Ruido de medición: básico vs robusto. El regulador básico persigue el ruido ($S$ oscila y el radio de polos supera $|z|=1$ en varios instantes); el robusto se estabiliza en el diseño nominal y regula mucho mejor a $\theta $}{figure.caption.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Demostración con planta distinta a priori}{13}{subsection.0.7.5}\protected@file@percent }
+\newlabel{sec:selftuning}{{7.5}{13}{Demostración con planta distinta a priori}{subsection.0.7.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Caso 1: Carrito $50\%$ más pesado (cambia la ganancia).}{13}{section*.14}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Autoajuste ante un carro $50\%$ más pesado. Estimados (línea continua) parten del prior nominal (punteado) y van hacia la planta real (guiones): $b$ converge al real; $a_1$ (eje ampliado) casi no cambia porque la masa apenas afecta los polos. El regulador $S$ se rediseña hacia el diseño de la planta real.}}{14}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:selftuning}{{7}{14}{Autoajuste ante un carro $50\%$ más pesado. Estimados (línea continua) parten del prior nominal (punteado) y van hacia la planta real (guiones): $b$ converge al real; $a_1$ (eje ampliado) casi no cambia porque la masa apenas afecta los polos. El regulador $S$ se rediseña hacia el diseño de la planta real}{figure.caption.15}{}}
+\@writefile{toc}{\contentsline {paragraph}{Caso 2: barra $10\%$ más larga (cambian los polos y la ganancia).}{14}{section*.16}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Autoajuste ante una barra $10\%$ más larga. A diferencia del caso de masa, ahora \textbf  {$a_1$ sí se mueve} (eje ampliado) desde el prior nominal hacia la planta real, junto con $b$; el regulador $S$ converge al diseño de la planta real.}}{15}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:selftuning_l}{{8}{15}{Autoajuste ante una barra $10\%$ más larga. A diferencia del caso de masa, ahora \textbf {$a_1$ sí se mueve} (eje ampliado) desde el prior nominal hacia la planta real, junto con $b$; el regulador $S$ converge al diseño de la planta real}{figure.caption.17}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}Suite de validación}{15}{subsection.0.7.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusiones}{15}{section.0.8}\protected@file@percent }
+\gdef \@abspage@last{17}

@@ -768,26 +768,6 @@ tests pasan):
   permanece estable.
 \end{itemize}
 
-% ==================================================================
-\section{Discusión}
-% ==================================================================
-
-\begin{itemize}[nosep]
-  \item \textbf{Persistencia de excitación.} Al ser una tarea de regulación
-  ($\theta \to 0$), una vez estabilizado el sistema la excitación se desvanece.
-  Por eso el RLS arranca desde el \emph{prior} nominal y se congela la
-  actualización con baja excitación: así el \emph{certainty equivalence} se
-  mantiene bien condicionado y estable. Iniciar el estimador desde un prior
-  neutro provocó, en pruebas, deriva de parámetros y divergencia.
-  \item \textbf{No cancelación de ceros.} El cero en $z\approx-1$ es no de fase
-  mínima; cancelarlo produciría \emph{ringing}. La colocación de polos sin
-  cancelación evita este problema.
-  \item \textbf{Comparación con el enfoque previo.} El STR discreto obtiene el
-  regulador directamente en $z$ resolviendo la Diofantina, eliminando la
-  conversión a continuo por Tustin y la colocación de polos en $s$. El
-  resultado es equivalente pero conceptualmente más directo y consistente con la
-  implementación digital.
-\end{itemize}
 
 % ==================================================================
 \section{Conclusiones}
@@ -813,7 +793,5 @@ de \emph{self-tuning}. En un escenario con incertidumbre paramétrica mayor, el
 autoajuste requeriría relajar el gate de rediseño (que hoy sólo garantiza
 estabilidad frente al prior) e introducir excitación explícita.
 
-Como material adicional se generan animaciones (\texttt{.mp4}) de cada escenario
-en \texttt{saved\_runs\_pid\_autotunning/}.
 
 \end{document}

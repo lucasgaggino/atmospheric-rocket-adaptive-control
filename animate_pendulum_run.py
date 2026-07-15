@@ -269,24 +269,24 @@ def animate_from_csv(csv_path, output_video_path):
         print(f"Saved as GIF: {gif_path}")
 
 if __name__ == "__main__":
-    csv_file = "saved_runs_pid_autotunning/pert_escalon.csv"
-    output_file = "saved_runs_pid_autotunning/pert_escalon_video.mp4"
+    csv_file = "saved_runs_pid_autotunning/pert_sinusoidal_robusto.csv"
+    output_file = "saved_runs_pid_autotunning/pert_sinusoidal_robusto.mp4"
     
     # Ensure output dir exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     animate_from_csv(csv_file, output_file)
     
-    csv_file = "saved_runs_pid_autotunning/pert_sinusoidal.csv"
-    output_file = "saved_runs_pid_autotunning/pert_sinusoidal_video.mp4"
+    csv_file = "saved_runs_pid_autotunning/ruido_medicion_robusto.csv"
+    output_file = "saved_runs_pid_autotunning/ruido_medicion_robusto.mp4"
     animate_from_csv(csv_file, output_file)
     
-    csv_file = "saved_runs_pid_autotunning/sin_perturbaciones.csv"
+    csv_file = "saved_runs_pid_autotunning/self_tuning_l.csv"
     output_file = "saved_runs_pid_autotunning/sin_perturbaciones_video.mp4"
     animate_from_csv(csv_file, output_file)
     
-    csv_file = "saved_runs_pid_autotunning/ruido_medicion.csv"
-    output_file = "saved_runs_pid_autotunning/ruido_medicion_video.mp4"
+    csv_file = "saved_runs_pid_autotunning/self_tuning.csv"
+    output_file = "saved_runs_pid_autotunning/self_tuning.mp4"
     animate_from_csv(csv_file, output_file)
     
     
